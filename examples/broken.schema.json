@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "一份写错了的 schema —— 用来演示 lint",
+  "type": "object",
+  "properties": {
+    "age": {
+      "type": "sting",
+      "minimum": -5
+    },
+    "score": {
+      "type": "number",
+      "exclusiveMaximum": 0
+    },
+    "level": {
+      "enum": "low"
+    }
+  },
+  "required": "age",
+  "minLength": -1,
+  "pattern": "^(abc]"
+}

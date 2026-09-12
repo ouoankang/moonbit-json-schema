@@ -1,0 +1,14 @@
+{
+  "name": "",
+  "age": -3,
+  "tags": ["重复", "重复"],
+  "role": "superuser",
+  "nickname": "这个属性没在 schema 里声明",
+  "address": {
+    "city": "上海",
+    "postcode": "31"
+  },
+  "friends": [
+    { "since": 2015 }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/person.schema.json",
+  "title": "人物档案",
+  "description": "演示用：覆盖 $defs/$ref、patternProperties、unevaluatedProperties、format 等关键字。",
+  "type": "object",
+  "required": ["name", "age"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "age": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 150
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "address": { "$ref": "#/$defs/address" },
+    "friends": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/friend" },
+      "maxItems": 20
+    },
+    "role": { "$ref": "#/$defs/role" }
+  },
+  "patternProperties": {
+    "^x-": { "type": "string" }
+  },
+  "unevaluatedProperties": false,
+  "$defs": {
+    "address": {
+      "type": "object",
+      "required": ["city"],
+      "properties": {
+        "city": { "type": "string" },
+        "postcode": { "type": "string", "pattern": "^[0-9]{6}$" }
+      },
+      "unevaluatedProperties": false
+    },
+    "friend": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "since": { "type": "integer", "minimum": 1900 }
+      }
+    },
+    "role": {
+      "enum": ["admin", "editor", "viewer"]
+    }
+  }
+}

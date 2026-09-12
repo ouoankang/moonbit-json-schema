@@ -1,0 +1,16 @@
+{
+  "name": "张三",
+  "age": 34,
+  "email": "zhangsan@example.com",
+  "tags": ["前端", "骑行"],
+  "role": "editor",
+  "x-source": "手工录入",
+  "address": {
+    "city": "杭州",
+    "postcode": "310000"
+  },
+  "friends": [
+    { "name": "李四", "since": 2015 },
+    { "name": "王五" }
+  ]
+}
