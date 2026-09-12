@@ -1,3 +1,21 @@
 #!/bin/sh
+# 提交前跑一遍最便宜的检查。
+#
+# 启用：git config core.hooksPath .githooks
+#
+# 这里刻意只做「快」的检查。一致性套件（cmd/conformance）要跑十几秒，
+# 放在提交钩子里会让人想办法绕过它；它更适合放在 CI 和手动执行。
+
+set -e
+
+# README.mbt.md 是 README.md 的副本（mooncakes.io 读它，GitHub 读 README.md）。
+# 先同步，再看还有没有差异——有差异就说明这次提交忘了带上它。
+node scripts/sync-readme.mjs
+if ! git diff --quiet -- README.mbt.md; then
+  echo ""
+  echo "README.mbt.md 是 README.md 的副本，已重新生成，请把它一起提交："
+  echo "    git add README.mbt.md"
+  exit 1
+fi
 
 moon check

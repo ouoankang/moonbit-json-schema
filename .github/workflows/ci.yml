@@ -1,0 +1,53 @@
+# 持续集成：类型检查 + 单元测试 + 官方一致性套件。
+#
+# 三件事都跑，是因为它们各自能抓到不同的问题：
+#   * `moon check` —— 任何目标上都该通过；库本体不依赖平台能力。
+#   * `moon test`  —— 默认 wasm 目标，跑单元测试。
+#   * 一致性套件   —— 走 js 后端（要读测试文件），给出必测通过率，
+#                     必测不全会让这一步失败，从而挡住回归。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Show toolchain versions
+        run: |
+          moon version --all
+          node --version
+
+      - name: Type check
+        run: moon check
+
+      - name: Unit tests
+        run: moon test
+
+      # 顺手校验生成物没有和脚本脱节：重跑两个生成器，再检查工作区是否被改动。
+      # 表是逐码点从宿主运行时抽出来的，换 Node 大版本理论上可能产生 diff，
+      # 所以这一步只做提示、不让它失败。
+      - name: Regenerate derived tables
+        run: |
+          node scripts/gen-unicode-categories.mjs
+          node scripts/gen-metaschema.mjs
+          git diff --stat
+
+      - name: Conformance suite (draft2020-12, required cases must be green)
+        run: moon run --target js cmd/conformance
+
+      - name: Smoke-test the CLI
+        run: |
+          moon run --target js cmd/main -- validate examples/person.schema.json examples/person.ok.json
+          moon run --target js cmd/main -- lint examples/person.schema.json
