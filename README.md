@@ -8,7 +8,7 @@
 | 指标 | 结果 |
 | --- | --- |
 | 官方一致性套件 · 必测用例 | **1301 / 1301（100.0%）** |
-| 官方一致性套件 · 可选用例 | 567 / 1023（55.4%，未实现 `format` 断言，见[已知限制](#已知限制)） |
+| 官方一致性套件 · 可选用例 | 929 / 1023（90.8%，未实现 IDN/IRI 与跨草案，见[已知限制](#已知限制)） |
 | 单元测试 | 51 / 51 通过（默认 `wasm` 目标） |
 | 自写源码 | 约 5 600 行 MoonBit（不含生成的 Unicode 表与元 schema） |
 
@@ -259,8 +259,12 @@ JSON-Schema-Test-Suite / draft2020-12
 - `draft2020-12/optional/*.json`——**可选**。规范明确允许实现不提供，
   1023 条。其中绝大部分是 `format` 断言（`optional/format/*.json`，共 854 条）。
 
-本实现必测部分全绿；可选部分 567/1023，未通过的全部集中在
-`format` 断言与跨草案方言上（见[已知限制](#已知限制)）。
+本实现必测部分全绿；可选部分 929/1023，未通过的全部集中在
+IDN/IRI（需要完整的 punycode 与 IDNA 表）与跨草案方言上（见
+[已知限制](#已知限制)）。其中 `format` 断言在跑 `optional/format/*` 时由
+测试台强制启用（见下），已实现的格式有 date-time / date / time / duration /
+ipv4 / ipv6 / hostname / email / uri / uri-reference / uri-template / uuid /
+json-pointer / relative-json-pointer / regex 共 15 个。
 测试台会把可选用例的失败单独列出来，但**不计入退出码**。
 
 ### 测试台自己也是被测对象
@@ -452,12 +456,16 @@ if !v.vocab_unevaluated { effective = without_keywords(effective, unevaluated_ke
 
 诚实列出来，都是有意取舍，不是遗漏：
 
-1. **`format` 默认是注解，不实现 format 断言。**
-   这符合 2020-12 的默认行为（`format-annotation` 词汇表），
-   所以 `optional/format/*.json` 里那些「期望不通过」的用例不计入成绩。
-   要拿到这部分分数需要实现 date / time / duration / ipv4 / ipv6 / uri /
-   email / hostname / idn-hostname 等十几个格式的解析器——包括 IDNA，
-   工作量与收益不成比例，所以留作后续。
+1. **`format` 断言默认关闭，且不实现 IDN/IRI 格式。**
+   `format` 在 2020-12 默认是注解（`format-annotation` 词汇表），只有元
+   schema 声明 `format-assertion` 时才升级为断言。一致性测试台跑
+   `optional/format/*` 时会**强制启用** format 断言，已实现 15 个格式
+   （date-time / date / time / duration / ipv4 / ipv6 / hostname / email /
+   uri / uri-reference / uri-template / uuid / json-pointer /
+   relative-json-pointer / regex）。
+   未实现的格式集中在需要完整 punycode 与 IDNA 表的 IDN/IRI 上：
+   `idn-email` / `idn-hostname` / `iri` / `iri-reference`，以及
+   `hostname` 里 `xn--` 前缀标签的 punycode 解码校验。这些留作后续。
 2. **只支持 draft 2020-12。** 2019-09 及更早草案不识别。
    这会让 `optional/cross-draft.json` 的 1 条用例失败（它要求把
    `draft2019-09/` 下的引用按 2019-09 语义处理）。

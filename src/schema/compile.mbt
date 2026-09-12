@@ -72,6 +72,13 @@ struct Validator {
   vocab_applicator : Bool
   vocab_validation : Bool
   vocab_unevaluated : Bool
+  /// format-assertion 词汇表。元 schema 显式声明它时，`format` 从注解
+  /// 升级为断言（对不认识的 format 仍放行）。默认关闭——这正是 2020-12
+  /// 的默认行为，也是官方必测用例依赖的行为。
+  vocab_format_assertion : Bool
+  /// 强制把 `format` 当断言（无视词汇表声明）。仅供一致性测试台跑
+  /// `optional/format/*` 用，普通用户路径恒为 false。
+  force_format : Bool
   /// 收集到的错误。
   mut errors : Array[ValidationError]
   /// 正在求值的 (schema 路径, 实例路径) 组合，用于打断自引用造成的死循环。
@@ -266,19 +273,24 @@ fn find_document(documents : Array[(String, Json)], uri : String) -> Json? {
 
 ///|
 /// 从根文档的 `$schema` 读出它启用了哪些词汇表，返回
-/// `(applicator, validation, unevaluated)`。
+/// `(applicator, validation, unevaluated, format_assertion)`。
 ///
-/// 默认全开。这个「默认」很关键：绝大多数 schema 不会自带一份元 schema，
-/// 它们指向的是 `https://json-schema.org/draft/2020-12/schema` 这个标准 URI，
+/// 默认前三项全开、format-assertion 关闭。这个「默认」很关键：
+/// 绝大多数 schema 不会自带一份元 schema，它们指向的是
+/// `https://json-schema.org/draft/2020-12/schema` 这个标准 URI，
 /// 而那份文档未必被登记进来。此时按 2020-12 全量词汇表处理才是对的——
 /// 「查不到就当成什么都没启用」会让所有关键字集体失效。
 ///
 /// 只有真的拿到了一份元 schema、且它写了 `$vocabulary`，才按声明裁剪。
+/// `format` 尤其如此：只有元 schema 显式声明了 `format-assertion` 词汇表，
+/// `format` 才作为断言生效；否则一律是注解（官方 `format-assertion.json`
+/// 用例专门验证这一点——`false` 值只影响「不认识的词汇表」的处理，
+/// 对已识别词汇表的校验行为无影响）。
 fn dialect_of(
   root : Json,
   documents : Array[(String, Json)],
-) -> (Bool, Bool, Bool) {
-  let full = (true, true, true)
+) -> (Bool, Bool, Bool, Bool) {
+  let full = (true, true, true, false)
   let schema_uri = match root {
     Object(o) => obj_get_str(o, "$schema")
     _ => None
@@ -302,6 +314,7 @@ fn dialect_of(
   let mut applicator = false
   let mut validation = false
   let mut unevaluated = false
+  let mut format_assertion = false
   for name, enabled in vocab {
     // 值必须是 `true`：`false` 表示「本实现不支持时也不得忽略」（规范 §8.1.2）。
     // 我们按「不支持即忽略」处理，所以这里只认 `true`。
@@ -318,8 +331,14 @@ fn dialect_of(
         unevaluated = true
       }
     }
+    // format-assertion 是个例外：只要词汇表被「声明」（无论 true/false），
+    // 本实现就认识它、就应当把 `format` 当断言。官方 format-assertion.json
+    // 明确要求 true/false 两个元 schema 产生完全相同的校验结果。
+    if name.has_suffix("/vocab/format-assertion") {
+      format_assertion = true
+    }
   }
-  (applicator, validation, unevaluated)
+  (applicator, validation, unevaluated, format_assertion)
 }
 
 ///|
@@ -339,6 +358,24 @@ fn Validator::build_with(
   root : Json,
   documents : Array[(String, Json)],
 ) -> Validator {
+  Validator::build_impl(root, documents, false)
+}
+
+///|
+/// 建立校验会话并强制 `format` 断言（一致性测试台专用）。
+fn Validator::build_with_forced_format(
+  root : Json,
+  documents : Array[(String, Json)],
+) -> Validator {
+  Validator::build_impl(root, documents, true)
+}
+
+///|
+fn Validator::build_impl(
+  root : Json,
+  documents : Array[(String, Json)],
+  force_format : Bool,
+) -> Validator {
   let root_base = match schema_id(root) {
     Some(id) => resolve("", id)
     None => ""
@@ -355,6 +392,8 @@ fn Validator::build_with(
     vocab_applicator: dialect.0,
     vocab_validation: dialect.1,
     vocab_unevaluated: dialect.2,
+    vocab_format_assertion: dialect.3,
+    force_format,
     errors: [],
     active: Map([]),
     depth: 0,

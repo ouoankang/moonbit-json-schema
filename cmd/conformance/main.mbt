@@ -222,11 +222,16 @@ fn collect_remotes(
 ///
 /// schema 按 group 编译一次、复用到该 group 的全部用例上——既省时间，
 /// 也更接近真实用法（一份 schema 校验多个实例）。
+///
+/// `force_format` 为 true 时用「强制 format 断言」编译 schema，专用于
+/// `optional/format/*` 目录——那些用例的 `$schema` 声明的是 format-annotation，
+/// 但官方把它们单列出来，本意就是给实现 format 断言的做法跑分。
 fn run_file(
   path : String,
   label : String,
   remotes : Array[(String, Json)],
   verbose : Bool,
+  force_format : Bool,
 ) -> Tally {
   let t = Tally::new()
   let doc = match try_parse(read_text(path)) {
@@ -249,9 +254,13 @@ fn run_file(
             match g.get("tests") {
               Some(Array(cases)) => {
                 let description = field_str(g, "description")
-                let compiled = @schema.Schema::of_with_documents(
-                  schema_node, remotes,
-                )
+                let compiled = if force_format {
+                  @schema.Schema::of_with_documents_forcing_format(
+                    schema_node, remotes,
+                  )
+                } else {
+                  @schema.Schema::of_with_documents(schema_node, remotes)
+                }
                 for case in cases {
                   match case {
                     Object(c) =>
@@ -359,6 +368,7 @@ fn main {
         name,
         remotes,
         verbose,
+        false,
       )
       let mark = if one.failed() == 0 { "ok  " } else { "FAIL" }
       println(
@@ -396,6 +406,7 @@ fn main {
           "optional/" + name,
           remotes,
           verbose,
+          false,
         )
         optional.merge(one)
         if one.failed() > 0 {
@@ -417,6 +428,7 @@ fn main {
           "optional/format/" + name,
           remotes,
           verbose,
+          true,
         )
         optional.merge(one)
         if one.failed() > 0 {

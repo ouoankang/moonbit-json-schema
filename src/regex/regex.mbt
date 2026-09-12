@@ -285,6 +285,9 @@ priv struct Parser {
   mut pos : Int
   mut groups : Int
   names : Map[String, Int]
+  /// 严格模式：`\a` 这类「恒等转义」仅限语法字符与 `/`（ECMA-262 非 Annex B）。
+  /// 供 `format: regex` 用；`pattern` 关键字走宽松 Annex B 语义。
+  strict : Bool
 }
 
 ///|
@@ -346,11 +349,21 @@ fn Parser::slice_text(self : Parser, from : Int, to : Int) -> String {
 fn parse_pattern(
   pattern : String,
 ) -> Result[(Array[Node], Map[String, Int], Int), String] {
+  parse_pattern_with_strict(pattern, false)
+}
+
+///|
+/// 解析整条模式，`strict` 控制恒等转义是否受限。
+fn parse_pattern_with_strict(
+  pattern : String,
+  strict : Bool,
+) -> Result[(Array[Node], Map[String, Int], Int), String] {
   let p : Parser = {
     src: to_code_points(pattern),
     pos: 0,
     groups: 0,
     names: Map([]),
+    strict,
   }
   let node = match p.parse_disjunction() {
     Ok(n) => n
@@ -809,7 +822,32 @@ fn Parser::read_char_escape(self : Parser) -> Int? {
         }
       }
     // 其余在非 u 模式下都是「恒等转义」，就是字符本身（`\a`、`\/`、`\ ` …）
-    _ => Some(cp)
+    _ =>
+      // 严格模式下，恒等转义只允许语法字符与 `/`（ECMA-262 非 Annex B）。
+      if self.strict {
+        let is_syntax = cp == 0x5E ||
+          cp == 0x24 ||
+          cp == 0x5C ||
+          cp == 0x2E ||
+          cp == 0x2A ||
+          cp == 0x2B ||
+          cp == 0x3F ||
+          cp == 0x28 ||
+          cp == 0x29 ||
+          cp == 0x5B ||
+          cp == 0x5D ||
+          cp == 0x7B ||
+          cp == 0x7D ||
+          cp == 0x7C ||
+          cp == 0x2F
+        if is_syntax {
+          Some(cp)
+        } else {
+          None
+        }
+      } else {
+        Some(cp)
+      }
   }
 }
 
@@ -957,6 +995,16 @@ pub fn Regex::compile(pattern : String) -> Regex raise RegexError {
 /// 模式是否合法。等价于「编译能否成功」，但不抛异常。
 pub fn Regex::is_valid(pattern : String) -> Bool {
   match parse_pattern(pattern) {
+    Ok(_) => true
+    Err(_) => false
+  }
+}
+
+///|
+/// 严格模式（ECMA-262 非 Annex B）下模式是否合法：`\a` 之类的恒等转义
+/// 仅限语法字符与 `/`。供 `format: regex` 用。
+pub fn Regex::is_valid_strict(pattern : String) -> Bool {
+  match parse_pattern_with_strict(pattern, true) {
     Ok(_) => true
     Err(_) => false
   }

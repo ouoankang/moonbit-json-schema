@@ -9,9 +9,11 @@
 // 全部语义都建立在它之上：它们只看「同一层里已经认领过什么」，所以在求值
 // 过程中必须把认领结果一层层带上来，见 `Outcome`。
 //
-// 纯注解关键字（title / description / default / examples / format / ...）
+// 纯注解关键字（title / description / default / examples / ...）
 // 一概不参与判定。`format` 在 2020-12 里默认就是注解，这一点经常被实现
-// 搞错——把 format 当断言会误判一批用例。
+// 搞错——把 format 当断言会误判一批用例。唯一的例外是：当根文档的 `$schema`
+// 指向的元 schema 显式声明了 `format-assertion` 词汇表时，`format` 才升级为
+// 断言（见 `format_ok`，其值校验逻辑在 format.mbt）。
 //
 // `$ref` 在 2020-12 中不再是「替换式」的：它和兄弟关键字同时生效，
 // 所以这里不做提前返回，而是把 $ref 的结果和本层的其它关键字合并判定。
@@ -38,6 +40,20 @@ pub fn Schema::of_with_documents(
   documents : Array[(String, Json)],
 ) -> Schema {
   { ctx: Validator::build_with(root, documents), }
+}
+
+///|
+/// 编译 schema 并强制启用 `format` 断言（无视元 schema 声明的词汇表）。
+///
+/// 供一致性测试台跑 `optional/format/*.json` 用：那些用例的 `$schema` 指向
+/// 标准元 schema（声明的是 format-annotation），但官方套件把它们放在
+/// `optional/format/` 下，本意就是「给愿意实现 format 断言的做法跑分」。
+/// 普通用户应使用 `of` / `of_with_documents`，保持 2020-12 的默认注解语义。
+pub fn Schema::of_with_documents_forcing_format(
+  root : Json,
+  documents : Array[(String, Json)],
+) -> Schema {
+  { ctx: Validator::build_with_forced_format(root, documents), }
 }
 
 ///|
@@ -911,6 +927,25 @@ fn eval_object_body(
             acc.ok = false
           }
         None => ()
+      }
+      // `format` 只在 format-assertion 词汇表启用时作为断言；默认是注解。
+      // `force_format` 让测试台跑 optional/format 时强制断言。
+      if v.vocab_format_assertion || v.force_format {
+        match obj_get_str(obj, "format") {
+          Some(fmt) =>
+            if !format_ok(fmt, s) {
+              report(
+                v,
+                collect,
+                instance_path,
+                "format",
+                schema_path,
+                "string does not match format `" + fmt + "`",
+              )
+              acc.ok = false
+            }
+          None => ()
+        }
       }
     }
     _ => ()
