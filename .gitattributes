@@ -1,0 +1,25 @@
+# 统一换行符。
+#
+# 仓库里同时有 MoonBit 源码、JSON 数据、shell 钩子和 Node 脚本，
+# 开发者可能在 Windows / macOS / Linux 上工作。不声明的话，Windows 上的
+# `core.autocrlf` 会把检出的文件变成 CRLF，`git add` 时又转回 LF，
+# 于是「明明没改过却显示被修改」，每次提交都刷一屏 warning。
+#
+# 显式声明：文本一律 LF 存储。
+* text=auto eol=lf
+
+# 二进制文件不做换行符转换。
+*.png binary
+*.jpg binary
+*.ico binary
+*.wasm binary
+*.exe binary
+
+# GitHub 的语言统计：测试数据是 vendored 的 JSON，别让它盖过真实源码。
+tests/JSON-Schema-Test-Suite/** linguist-vendored
+src/metaschema/raw/** linguist-vendored
+src/regex/unicode_categories.mbt linguist-generated
+src/metaschema/meta_docs.mbt linguist-generated
+
+# 生成的表很长，折叠进 diff 也没意义；这里只标记为生成物。
+*.mbt diff=moonbit
