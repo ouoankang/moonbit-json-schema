@@ -49,6 +49,9 @@ JSON Schema 是描述 JSON 数据形状的通用契约语言：OpenAPI、CI 配�
 **检查一份 schema 本身写得对不对**（`lint`）——`{"type":"sting"}` 这种笔误
 在校验实例时永远不会报错，只有拿元 schema 校验一遍才会暴露。
 
+想先看效果再读代码：打开 `web/index.html`（双击即可，无需构建），
+浏览器里跑的就是这份实现本身。
+
 ---
 
 ## 快速开始
@@ -158,6 +161,38 @@ let compiled = @schema.Schema::of_with_documents(
 )
 ```
 
+### 5. 在浏览器里
+
+`web/index.html` 是一个纯静态页面，浏览器里跑的是**同一份实现**——它经
+MoonBit 的 js 后端编译而来，不是另写的 JavaScript 版本。直接双击打开即可，
+不需要起服务器：
+
+```
+web/index.html
+```
+
+页面提供三个动作：校验实例、用元 schema 检查 schema、查看内置的 9 份官方
+元 schema。它同时也是一份手把手的说明——每个示例都在演示一个具体的关键字
+行为（注解怎么冒泡、`$dynamicRef` 怎么收敛、`lint` 为什么能抓到 `validate`
+抓不到的错）。
+
+重新构建页面产物：
+
+```sh
+node scripts/build-web.mjs
+```
+
+页面自己也有一组检查，四层各挡一类问题——只跑第一层是不够的：
+
+| 脚本 | 挡什么 |
+| --- | --- |
+| `web-wiring-check.mjs` | DOM id 对不上、脚本路径写错、加载顺序反了 |
+| `web-smoke.mjs` | 接口没挂上或挂错（`moon test` 完全覆盖不到这一层） |
+| `web-examples-check.mjs` | 示例与实现脱节——页面开始演示一个并不存在的功能 |
+| `web-render-check.mjs` | 真建 DOM、真点按钮，检查页面上的字变了没有 |
+
+`web-render-check.mjs` 依赖 `jsdom`，没装会自行跳过，不影响其余检查。
+
 ---
 
 ## 覆盖了哪些关键字
@@ -261,11 +296,22 @@ JSTS_ONLY=dynamicRef JSTS_VERBOSE=1 moon run --target js cmd/conformance
 │       └── raw/            原样下载的官方 JSON
 ├── cmd/
 │   ├── main/               CLI：validate / lint / metaschema
+│   ├── web/                浏览器入口：把 API 挂到 globalThis
 │   └── conformance/        官方一致性测试台
+├── web/                    在线试用页（纯静态，双击可开）
+│   ├── index.html
+│   ├── app.js              页面胶水层，不含校验逻辑
+│   ├── examples.js         示例数据（自带期望值，可被脚本校验）
+│   └── vendor/             MoonBit 编译产物（由 build-web.mjs 拷贝）
 ├── examples/               示例 schema 与实例
 ├── scripts/
 │   ├── gen-unicode-categories.mjs
-│   └── gen-metaschema.mjs
+│   ├── gen-metaschema.mjs
+│   ├── build-web.mjs                编译并拷贝页面产物
+│   ├── web-wiring-check.mjs         DOM id 与脚本路径（无依赖）
+│   ├── web-smoke.mjs                接口是否真的挂上了
+│   ├── web-examples-check.mjs       示例是否还与实现一致
+│   └── web-render-check.mjs         真跑一遍页面（需 jsdom，可选）
 └── tests/JSON-Schema-Test-Suite/   随仓库版本化的官方套件
 ```
 

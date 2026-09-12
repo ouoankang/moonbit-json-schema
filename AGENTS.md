@@ -128,7 +128,57 @@ mooncakes.io 读后者）。改完 README 记得跑 `node scripts/sync-readme.mj
 - 已废弃的 API：`Char::from_int` → `Int::unsafe_to_char`，
   `String::ends_with` → `String::has_suffix`，
   JS FFI 里的 `Array[String]` → `FixedArray[String]`。
+- **`s[i]` 返回的是 `UInt16`（UTF-16 码元），不是 `Char`。**
+  所以 `s[i].to_string()` 得到的是十进制码位——`"https"` 会变成
+  `"104116116112115"`，而且**能编译通过**，只在运行结果里露馅。
+  要遍历字符用 `s.code_units()` 配 `unit.unsafe_to_char()`（见
+  `src/schema/uri.mbt` 的 `percent_decode`），要单个字符用 `s.get_char(i)`。
+- `extern "js"` 的 FFI **可以直接把 MoonBit 闭包当参数传给 JS**
+  （`cmd/web/main.mbt` 靠这个把 API 挂到 `globalThis`）。这是把 MoonBit
+  编成浏览器可调用模块的关键手法。
 - `///|` 文档分隔符必须紧邻声明，中间插了别的行会让下一段声明变成孤立块。
+
+### 在线演示页（`web/` + `cmd/web/`）
+
+`web/index.html` 是一个纯静态页面，浏览器里跑的是**同一份实现**——
+经 MoonBit 的 js 后端编译而来，不是另写的 JavaScript 版本。
+
+```
+cmd/web/main.mbt        MoonBit 侧入口：把三个函数挂到 globalThis
+        ↓ moon build --target js --release
+_build/js/release/build/cmd/web/web.js
+        ↓ node scripts/build-web.mjs（拷贝）
+web/vendor/moonbit-json-schema.js   ← 提交进仓库，clone 下来即可打开
+```
+
+接口形状（`web-smoke.mjs` 会钉住）：三个函数都收字符串、返回 JSON 字符串。
+
+| 函数 | 作用 |
+| --- | --- |
+| `validate(schemaText, instanceText)` | 校验实例 |
+| `lint(schemaText)` | 用元 schema 检查 schema 自身 |
+| `metaschemaList()` | 列出内置的 9 份官方元 schema |
+
+改完 `cmd/web/` 或 `web/` 之后：
+
+```sh
+node scripts/build-web.mjs          # 重新编译并拷贝产物
+node scripts/web-wiring-check.mjs   # DOM id 与脚本路径（无依赖）
+node scripts/web-smoke.mjs          # 接口是否真的挂上了
+node scripts/web-examples-check.mjs # 页面示例是否还与实现一致
+node scripts/web-render-check.mjs   # 真跑一遍页面（需 jsdom，没有则跳过）
+```
+
+四个检查各挡一类问题，别只跑第一个：
+
+- **wiring** 静态核对，证明不了「按下去有反应」；
+- **smoke** 证明接口挂上了，碰不到 DOM；
+- **examples** 证明示例不说谎——页面最容易犯的不是报错，而是**演示一个
+  并不存在的功能**，那种错误照样能打开、照样有输出，只能靠断言抓；
+- **render** 真的建 DOM、真的点按钮，检查页面上的字变了没有。
+
+页面刻意用传统 `<script>` 而非 ES module，为的是 `file://` 下双击就能打开。
+改脚本引用时留意 `web-wiring-check.mjs` 里那条顺序断言。
 
 ### vendored 数据
 

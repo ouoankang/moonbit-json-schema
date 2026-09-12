@@ -51,3 +51,33 @@ jobs:
         run: |
           moon run --target js cmd/main -- validate examples/person.schema.json examples/person.ok.json
           moon run --target js cmd/main -- lint examples/person.schema.json
+
+      # ---------------------------------------------------------------------
+      # 在线演示页那条链路。
+      #
+      # 单独验证是必要的：页面的入口是 MoonBit 的 js 后端 + FFI 挂载，
+      # `moon test` 跑的是 wasm 上的库代码，完全覆盖不到。库测试全绿、
+      # 页面白屏，是真实会发生的情况。
+      # ---------------------------------------------------------------------
+
+      - name: Check demo page wiring (no dependencies)
+        run: node scripts/web-wiring-check.mjs
+
+      # 产物是提交进仓库的（这样 clone 下来 web/index.html 双击就能开）。
+      # 这里重新构建一遍看有没有脱节。和上面的生成物一样只做提示：
+      # 换 MoonBit 版本后产物字节会变，不该因此判定 CI 失败。
+      - name: Rebuild web bundle and show any drift
+        run: |
+          node scripts/build-web.mjs
+          git diff --stat
+
+      - name: Smoke-test the browser entry
+        run: node scripts/web-smoke.mjs
+
+      - name: Check demo examples still match real behaviour
+        run: node scripts/web-examples-check.mjs
+
+      - name: Render the demo page in jsdom (optional)
+        run: |
+          npm install --no-save jsdom || echo "jsdom 装不上，脚本会自行跳过"
+          node scripts/web-render-check.mjs

@@ -21,5 +21,10 @@ src/metaschema/raw/** linguist-vendored
 src/regex/unicode_categories.mbt linguist-generated
 src/metaschema/meta_docs.mbt linguist-generated
 
+# 演示页的 MoonBit 产物：由 scripts/build-web.mjs 从 _build/ 拷贝而来。
+# 提交它是为了让 web/index.html 双击就能打开、clone 下来不必先编译；
+# 但它不是手写代码，要排除在语言统计之外。
+web/vendor/** linguist-generated
+
 # 生成的表很长，折叠进 diff 也没意义；这里只标记为生成物。
 *.mbt diff=moonbit

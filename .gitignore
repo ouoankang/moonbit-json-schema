@@ -4,3 +4,11 @@ target/
 target
 .mooncakes/
 .moonagent/
+
+# moon info 生成的公开接口描述。名字里就写着 generated，
+# 内容完全由源码决定，`moon info` 随时可以重建，不必进版本库。
+pkg.generated.mbti
+
+# 页面渲染验证用的可选依赖（scripts/web-render-check.mjs）。
+# 没装也能跑其余检查，脚本会自己跳过。
+node_modules/
