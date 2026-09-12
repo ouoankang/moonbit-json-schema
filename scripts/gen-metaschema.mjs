@@ -12,6 +12,7 @@
 // 抓取命令见 src/metaschema/raw/README.md。
 
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -110,3 +111,13 @@ out += "}\n";
 
 writeFileSync(outFile, out);
 console.log(`wrote ${outFile} (${out.length} bytes, ${docs.length} documents)`);
+
+// 再跑一次格式化器，只针对刚写出的这个文件。
+//
+// 生成器是机械拼字符串的，拼出来的排版不一定符合 moon fmt 的规则：
+// `[...]` 数组、尾逗号、多行参数列表都有自己的写法。不统一的话会陷入
+// 「手动 `moon fmt` 改动它 → 重新生成又改回来」的来回漂移，CI 里
+// 「重新生成后工作区是否干净」这条检查就永远有噪音，很快就没人看了。
+//
+// 只传这一个文件路径，避免顺手格式化掉别人未提交的改动。
+execFileSync("moon", ["fmt", outFile], { cwd: root, stdio: "inherit" });

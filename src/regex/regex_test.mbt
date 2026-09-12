@@ -248,16 +248,21 @@ test "lazy quantifiers" {
 ///|
 test "syntax validation" {
   // 合法
-  for pattern in [
-    "(?<=a+)b", "(?<n>a)\\k<n>", "(?<name>x)", "([abc])+\\s+$", "[]", "[^]",
-    "\\a", "\\cA", "a{2,3}", "a{2,}", "(?:x)",
-  ] {
+  for
+    pattern in [
+      "(?<=a+)b", "(?<n>a)\\k<n>", "(?<name>x)", "([abc])+\\s+$", "[]", "[^]", "\\a",
+      "\\cA", "a{2,3}", "a{2,}", "(?:x)",
+    ] {
     if !Regex::is_valid(pattern) {
       fail("should be valid: " + pattern)
     }
   }
   // 非法
-  for pattern in ["^(abc]", "(?#comment)a", "(?P<n>a)(?P=n)", "(?i)abc", "(?ims)abc", "a{3,1}", "\\p{NoSuchProperty}", "[z-a]"] {
+  for
+    pattern in [
+      "^(abc]", "(?#comment)a", "(?P<n>a)(?P=n)", "(?i)abc", "(?ims)abc", "a{3,1}",
+      "\\p{NoSuchProperty}", "[z-a]",
+    ] {
     if Regex::is_valid(pattern) {
       fail("should be invalid: " + pattern)
     }

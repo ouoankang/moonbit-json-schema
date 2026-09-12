@@ -19,50 +19,60 @@
 // 没必要为此把库本体拖上平台相关的实现。
 // ---------------------------------------------------------------------------
 
+///|
 #cfg(target="js")
 extern "js" fn read_text(path : String) -> String =
   #| (p) => require("fs").readFileSync(p, "utf8")
 
+///|
 #cfg(target="js")
 extern "js" fn list_names(path : String) -> FixedArray[String] =
   #| (p) => require("fs").readdirSync(p)
 
+///|
 #cfg(target="js")
 extern "js" fn is_dir(path : String) -> Bool =
   #| (p) => { try { return require("fs").statSync(p).isDirectory(); } catch (e) { return false; } }
 
+///|
 #cfg(target="js")
 extern "js" fn env_var(name : String) -> String =
   #| (n) => process.env[n] || ""
 
+///|
 #cfg(target="js")
 extern "js" fn set_exit_code(code : Int) -> Unit =
   #| (c) => { process.exitCode = c }
 
+///|
 #cfg(not(target="js"))
 fn read_text(path : String) -> String {
   ignore(path)
   ""
 }
 
+///|
 #cfg(not(target="js"))
 fn list_names(path : String) -> FixedArray[String] {
   ignore(path)
   []
 }
 
+///|
 #cfg(not(target="js"))
 fn is_dir(path : String) -> Bool {
   ignore(path)
   false
 }
 
+///|
 #cfg(not(target="js"))
 fn env_var(name : String) -> String {
   ignore(name)
   ""
 }
 
+///|
 #cfg(not(target="js"))
 fn set_exit_code(code : Int) -> Unit {
   ignore(code)
@@ -82,9 +92,7 @@ const REMOTE_BASE : String = "http://localhost:1234/"
 
 ///|
 fn try_parse(text : String) -> Json? {
-  try {
-    Some(@json.parse(text))
-  } catch {
+  Some(@json.parse(text)) catch {
     _ => None
   }
 }
@@ -144,7 +152,7 @@ struct Tally {
 
 ///|
 fn Tally::new() -> Tally {
-  { total: 0, passed: 0, failures: [] }
+  { total: 0, passed: 0, failures: [], }
 }
 
 ///|
@@ -242,8 +250,7 @@ fn run_file(
               Some(Array(cases)) => {
                 let description = field_str(g, "description")
                 let compiled = @schema.Schema::of_with_documents(
-                  schema_node,
-                  remotes,
+                  schema_node, remotes,
                 )
                 for case in cases {
                   match case {

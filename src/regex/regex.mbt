@@ -18,7 +18,6 @@
 //   * `\p{...}` 需要 Unicode 一般类别数据，见同目录 `unicode_categories.mbt`
 //     （由 `scripts/gen-unicode-categories.mjs` 生成）。
 
-
 ///|
 /// 正则语法错误。`Regex::compile` 在模式不合法时抛出。
 pub(all) suberror RegexError {
@@ -150,9 +149,8 @@ fn property_categories(name : String) -> Array[Int] {
     "Nd" | "Decimal_Number" | "digit" => [cat_Nd]
     "Nl" | "Letter_Number" => [cat_Nl]
     "No" | "Other_Number" => [cat_No]
-    "P" | "Punctuation" | "punct" => [
-      cat_Pc, cat_Pd, cat_Ps, cat_Pe, cat_Pi, cat_Pf, cat_Po,
-    ]
+    "P" | "Punctuation" | "punct" =>
+      [cat_Pc, cat_Pd, cat_Ps, cat_Pe, cat_Pi, cat_Pf, cat_Po]
     "Pc" | "Connector_Punctuation" => [cat_Pc]
     "Pd" | "Dash_Punctuation" => [cat_Pd]
     "Ps" | "Open_Punctuation" => [cat_Ps]
@@ -558,7 +556,10 @@ fn Parser::read_property(self : Parser, offset : Int) -> Result[String, String] 
   self.pos = self.pos + 1
   if !is_known_property(name) {
     return Err(
-      "unknown Unicode property '" + name + "' at offset " + name_start.to_string(),
+      "unknown Unicode property '" +
+      name +
+      "' at offset " +
+      name_start.to_string(),
     )
   }
   Ok(name)
@@ -591,12 +592,16 @@ fn Parser::parse_group(self : Parser) -> Result[Node, String] {
     0x3D => {
       // (?= ... )
       self.pos = self.pos + 1
-      self.finish_group(start, fn(inner : Node) -> Node { Look(inner, false, false) })
+      self.finish_group(start, fn(inner : Node) -> Node {
+        Look(inner, false, false)
+      })
     }
     0x21 => {
       // (?! ... )
       self.pos = self.pos + 1
-      self.finish_group(start, fn(inner : Node) -> Node { Look(inner, false, true) })
+      self.finish_group(start, fn(inner : Node) -> Node {
+        Look(inner, false, true)
+      })
     }
     0x3C =>
       match self.at(1) {
@@ -673,7 +678,7 @@ fn Parser::parse_escape(self : Parser, in_class : Bool) -> Result[Node, String] 
   if is_builtin_class_letter(cp) {
     // `\d` 之类在类外也合法：包成一个单元素字符类即可，判定逻辑不用分叉。
     self.pos = self.pos + 1
-    return Ok(Class({ negated: false, items: [CBuiltin(cp)] }))
+    return Ok(Class({ negated: false, items: [CBuiltin(cp)], }))
   }
   match cp {
     0x62 => {
@@ -794,7 +799,8 @@ fn Parser::read_char_escape(self : Parser) -> Int? {
         None
       } else {
         let letter = self.peek()
-        if (letter >= 0x41 && letter <= 0x5A) || (letter >= 0x61 && letter <= 0x7A) {
+        if (letter >= 0x41 && letter <= 0x5A) ||
+          (letter >= 0x61 && letter <= 0x7A) {
           self.pos = self.pos + 1
           Some(letter % 32)
         } else {
@@ -853,7 +859,8 @@ fn Parser::parse_class(self : Parser) -> Result[Node, String] {
         (CSingle(lo), CSingle(hi)) =>
           if lo > hi {
             return Err(
-              "character class range out of order at offset " + start.to_string(),
+              "character class range out of order at offset " +
+              start.to_string(),
             )
           } else {
             items.push(CRange(lo, hi))
@@ -871,7 +878,7 @@ fn Parser::parse_class(self : Parser) -> Result[Node, String] {
     return Err("unclosed character class at offset " + start.to_string())
   }
   self.pos = self.pos + 1 // 跳过 ']'
-  Ok(Class({ negated, items }))
+  Ok(Class({ negated, items, }))
 }
 
 ///|
@@ -943,7 +950,7 @@ pub fn Regex::compile(pattern : String) -> Regex raise RegexError {
     Ok(p) => p
     Err(message) => raise SyntaxError(message)
   }
-  { prog: parsed.0, names: parsed.1, group_count: parsed.2, source: pattern }
+  { prog: parsed.0, names: parsed.1, group_count: parsed.2, source: pattern, }
 }
 
 ///|
@@ -1035,7 +1042,9 @@ fn Matcher::seq(
   if i >= prog.length() {
     return k(pos)
   }
-  self.node_match(prog[i], pos, fn(p : Int) -> Bool { self.seq(prog, i + 1, p, k) })
+  self.node_match(prog[i], pos, fn(p : Int) -> Bool {
+    self.seq(prog, i + 1, p, k)
+  })
 }
 
 ///|
@@ -1066,11 +1075,7 @@ fn Matcher::node_match(
       }
     Prop(name, negated) => {
       let matched = pos < self.len && prop_matches(name, self.input[pos])
-      let accept = if negated {
-        !matched
-      } else {
-        matched
-      }
+      let accept = if negated { !matched } else { matched }
       if pos < self.len && accept {
         k(pos + 1)
       } else {
@@ -1091,25 +1096,21 @@ fn Matcher::node_match(
     Group(index, inner) => {
       let saved_start = self.cap_start[index]
       let saved_end = self.cap_end[index]
-      let ok = self.node_match(
-        inner,
-        pos,
-        fn(p : Int) -> Bool {
-          // 捕获要记成「本次尝试的起止」供反向引用读取；延续失败时
-          // 连同捕获一起回滚，否则分支回溯会带出上一次尝试的脏值。
-          let prev_start = self.cap_start[index]
-          let prev_end = self.cap_end[index]
-          self.cap_start[index] = pos
-          self.cap_end[index] = p
-          if k(p) {
-            true
-          } else {
-            self.cap_start[index] = prev_start
-            self.cap_end[index] = prev_end
-            false
-          }
-        },
-      )
+      let ok = self.node_match(inner, pos, fn(p : Int) -> Bool {
+        // 捕获要记成「本次尝试的起止」供反向引用读取；延续失败时
+        // 连同捕获一起回滚，否则分支回溯会带出上一次尝试的脏值。
+        let prev_start = self.cap_start[index]
+        let prev_end = self.cap_end[index]
+        self.cap_start[index] = pos
+        self.cap_end[index] = p
+        if k(p) {
+          true
+        } else {
+          self.cap_start[index] = prev_start
+          self.cap_end[index] = prev_end
+          false
+        }
+      })
       if !ok {
         self.cap_start[index] = saved_start
         self.cap_end[index] = saved_end
@@ -1170,18 +1171,8 @@ fn Matcher::node_match(
         }
       }
     }
-    StartAnchor =>
-      if pos == 0 {
-        k(pos)
-      } else {
-        false
-      }
-    EndAnchor =>
-      if pos == self.len {
-        k(pos)
-      } else {
-        false
-      }
+    StartAnchor => if pos == 0 { k(pos) } else { false }
+    EndAnchor => if pos == self.len { k(pos) } else { false }
     WordBoundary(want) => {
       let before = pos > 0 && is_word_cp(self.input[pos - 1])
       let after = pos < self.len && is_word_cp(self.input[pos])
@@ -1199,11 +1190,7 @@ fn Matcher::node_match(
 ///
 /// 后瞻要倒着匹配，而回溯引擎天然是正向的；这里用「枚举所有起点 + 要求
 /// 恰好停在 end」来实现。输入通常很短，代价可以接受。
-fn Matcher::matches_ending_at(
-  self : Matcher,
-  node : Node,
-  end : Int,
-) -> Bool {
+fn Matcher::matches_ending_at(self : Matcher, node : Node, end : Int) -> Bool {
   for start = 0; start <= end; start = start + 1 {
     if self.node_match(node, start, fn(p : Int) -> Bool { p == end }) {
       return true
@@ -1230,17 +1217,13 @@ fn Matcher::repeat_match(
   let can_more = max < 0 || count < max
   if greedy {
     if can_more &&
-      self.node_match(
-        inner,
-        pos,
-        fn(p : Int) -> Bool {
-          if p == pos {
-            false
-          } else {
-            self.repeat_match(inner, min, max, greedy, count + 1, p, k)
-          }
-        },
-      ) {
+      self.node_match(inner, pos, fn(p : Int) -> Bool {
+        if p == pos {
+          false
+        } else {
+          self.repeat_match(inner, min, max, greedy, count + 1, p, k)
+        }
+      }) {
       return true
     }
     if count >= min {
@@ -1252,17 +1235,13 @@ fn Matcher::repeat_match(
       return true
     }
     if can_more {
-      return self.node_match(
-        inner,
-        pos,
-        fn(p : Int) -> Bool {
-          if p == pos {
-            false
-          } else {
-            self.repeat_match(inner, min, max, greedy, count + 1, p, k)
-          }
-        },
-      )
+      return self.node_match(inner, pos, fn(p : Int) -> Bool {
+        if p == pos {
+          false
+        } else {
+          self.repeat_match(inner, min, max, greedy, count + 1, p, k)
+        }
+      })
     }
     false
   }
@@ -1274,18 +1253,9 @@ fn class_matches(klass : CharClass, cp : Int) -> Bool {
   let mut hit = false
   for item in klass.items {
     match item {
-      CSingle(c) =>
-        if cp == c {
-          hit = true
-        }
-      CRange(lo, hi) =>
-        if cp >= lo && cp <= hi {
-          hit = true
-        }
-      CBuiltin(letter) =>
-        if builtin_matches(letter, cp) {
-          hit = true
-        }
+      CSingle(c) => if cp == c { hit = true }
+      CRange(lo, hi) => if cp >= lo && cp <= hi { hit = true }
+      CBuiltin(letter) => if builtin_matches(letter, cp) { hit = true }
       CProp(name, negated) => {
         let m = prop_matches(name, cp)
         if (if negated { !m } else { m }) {

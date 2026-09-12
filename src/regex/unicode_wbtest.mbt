@@ -12,7 +12,10 @@
 test "unicode category table sanity" {
   // 30 个一般类别：L(5) M(3) N(3) P(7) S(4) Z(3) C(5)
   if unicode_category_names.length() != 30 {
-    fail("expected 30 general categories, got " + unicode_category_names.length().to_string())
+    fail(
+      "expected 30 general categories, got " +
+      unicode_category_names.length().to_string(),
+    )
   }
 
   let first = unicode_runs[0]

@@ -31,11 +31,7 @@ pub fn metaschema_documents() -> Array[(String, Json)] {
   let out : Array[(String, Json)] = []
   for entry in metaschema_texts() {
     let uri = entry.0
-    let parsed = try {
-      Some(@json.parse(entry.1))
-    } catch {
-      _ => None
-    }
+    let parsed = Some(@json.parse(entry.1)) catch { _ => None }
     match parsed {
       Some(node) => out.push((uri, node))
       None => ()

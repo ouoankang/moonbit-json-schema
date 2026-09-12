@@ -104,6 +104,12 @@ JSTS_ONLY=dynamicRef JSTS_VERBOSE=1 moon run --target js cmd/conformance
 另有一份「伪生成物」：`README.mbt.md` 是 `README.md` 的副本（GitHub 读前者、
 mooncakes.io 读后者）。改完 README 记得跑 `node scripts/sync-readme.mjs`。
 
+两个生成器在写完之后会**只针对刚写出的那个文件**跑一次 `moon fmt`。这一步
+不是可有可无的：生成器是机械拼字符串的，拼出来的排版（数组换行、尾逗号、
+多行参数列表）不一定符合格式化器的规则。不统一的话会陷入「手动 `moon fmt`
+改动它 → 重新生成又改回来」的来回漂移，CI 里「重新生成后工作区是否干净」
+这条检查就永远有噪音，很快没人会再看它。改生成器时别把这一步删掉。
+
 ### 测试文件放哪
 
 - `*_test.mbt` —— **黑盒**测试，只能看到公开 API。库的默认选择。

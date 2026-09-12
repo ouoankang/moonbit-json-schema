@@ -10,69 +10,100 @@
 ///|
 /// 一般类别的名字，下标与 `unicode_runs` 里第三项一致。
 let unicode_category_names : Array[String] = [
-  "Lu",
-  "Ll",
-  "Lt",
-  "Lm",
-  "Lo",
-  "Mn",
-  "Mc",
-  "Me",
-  "Nd",
-  "Nl",
-  "No",
-  "Pc",
-  "Pd",
-  "Ps",
-  "Pe",
-  "Pi",
-  "Pf",
-  "Po",
-  "Sm",
-  "Sc",
-  "Sk",
-  "So",
-  "Zs",
-  "Zl",
-  "Zp",
-  "Cc",
-  "Cf",
-  "Cs",
-  "Co",
-  "Cn",
+  "Lu", "Ll", "Lt", "Lm", "Lo", "Mn", "Mc", "Me", "Nd", "Nl", "No", "Pc", "Pd", "Ps",
+  "Pe", "Pi", "Pf", "Po", "Sm", "Sc", "Sk", "So", "Zs", "Zl", "Zp", "Cc", "Cf", "Cs",
+  "Co", "Cn",
 ]
 
 ///|
 /// 类别常量下标，便于按名字引用（避免在代码里写魔数）。
 let cat_Lu : Int = 0
+
+///|
 let cat_Ll : Int = 1
+
+///|
 let cat_Lt : Int = 2
+
+///|
 let cat_Lm : Int = 3
+
+///|
 let cat_Lo : Int = 4
+
+///|
 let cat_Mn : Int = 5
+
+///|
 let cat_Mc : Int = 6
+
+///|
 let cat_Me : Int = 7
+
+///|
 let cat_Nd : Int = 8
+
+///|
 let cat_Nl : Int = 9
+
+///|
 let cat_No : Int = 10
+
+///|
 let cat_Pc : Int = 11
+
+///|
 let cat_Pd : Int = 12
+
+///|
 let cat_Ps : Int = 13
+
+///|
 let cat_Pe : Int = 14
+
+///|
 let cat_Pi : Int = 15
+
+///|
 let cat_Pf : Int = 16
+
+///|
 let cat_Po : Int = 17
+
+///|
 let cat_Sm : Int = 18
+
+///|
 let cat_Sc : Int = 19
+
+///|
 let cat_Sk : Int = 20
+
+///|
 let cat_So : Int = 21
+
+///|
 let cat_Zs : Int = 22
+
+///|
 let cat_Zl : Int = 23
+
+///|
 let cat_Zp : Int = 24
+
+///|
 let cat_Cc : Int = 25
+
+///|
 let cat_Cf : Int = 26
+
+///|
 let cat_Cs : Int = 27
+
+///|
 let cat_Co : Int = 28
+
+///|
 let cat_Cn : Int = 29
 
 ///|

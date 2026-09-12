@@ -137,11 +137,7 @@ fn schema_dynamic_anchor(node : Json) -> String? {
 ///|
 /// 在 JSON 文档里按 JSON Pointer 取节点；解析失败或越界返回 `None`。
 fn pointer_lookup(root : Json, pointer : String) -> Json? {
-  let tokens = try {
-    Some(@pointer.parse(pointer))
-  } catch {
-    _ => None
-  }
+  let tokens = Some(@pointer.parse(pointer)) catch { _ => None }
   match tokens {
     Some(ts) => @pointer.get_by_tokens(root, ts)
     None => None
@@ -151,37 +147,20 @@ fn pointer_lookup(root : Json, pointer : String) -> Json? {
 ///|
 /// 可能承载子 schema 的关键字（值本身是一个 schema）。
 let single_subschema_keywords : Array[String] = [
-  "additionalProperties",
-  "additionalItems",
-  "contains",
-  "propertyNames",
-  "if",
-  "then",
-  "else",
-  "not",
-  "unevaluatedItems",
-  "unevaluatedProperties",
-  "contentSchema",
+  "additionalProperties", "additionalItems", "contains", "propertyNames", "if", "then",
+  "else", "not", "unevaluatedItems", "unevaluatedProperties", "contentSchema",
 ]
 
 ///|
 /// 值可能是「单个 schema」或「schema 数组」的关键字。
 let list_subschema_keywords : Array[String] = [
-  "allOf",
-  "anyOf",
-  "oneOf",
-  "prefixItems",
-  "items",
+  "allOf", "anyOf", "oneOf", "prefixItems", "items",
 ]
 
 ///|
 /// 值是「名字 -> schema」映射的关键字。
 let map_subschema_keywords : Array[String] = [
-  "$defs",
-  "definitions",
-  "properties",
-  "patternProperties",
-  "dependentSchemas",
+  "$defs", "definitions", "properties", "patternProperties", "dependentSchemas",
 ]
 
 ///|
@@ -198,7 +177,7 @@ fn index_node(v : Validator, node : Json, base : String, path : String) -> Unit 
   let node_base = match obj_get_str(obj, "$id") {
     Some(id) => {
       let resolved = resolve(base, id)
-      v.resources.set(resolved, { node, path, uri: resolved, base })
+      v.resources.set(resolved, { node, path, uri: resolved, base, })
       resolved
     }
     None => base
@@ -206,14 +185,18 @@ fn index_node(v : Validator, node : Json, base : String, path : String) -> Unit 
   // `$anchor` 只进静态表；`$dynamicAnchor` 两张表都进——因为它既能被
   // 普通 `$ref` 当锚点用，又是动态作用域解析的候选。
   match obj_get_str(obj, "$anchor") {
-    Some(anchor) => {
-      v.anchors.set(node_base + "#" + anchor, { node, path, uri: node_base, base })
-    }
+    Some(anchor) =>
+      v.anchors.set(node_base + "#" + anchor, {
+        node,
+        path,
+        uri: node_base,
+        base,
+      })
     None => ()
   }
   match obj_get_str(obj, "$dynamicAnchor") {
     Some(anchor) => {
-      let entry : SchemaRef = { node, path, uri: node_base, base }
+      let entry : SchemaRef = { node, path, uri: node_base, base, }
       v.anchors.set(node_base + "#" + anchor, entry)
       v.dynamic_anchors.set(node_base + "#" + anchor, entry)
     }
@@ -221,15 +204,14 @@ fn index_node(v : Validator, node : Json, base : String, path : String) -> Unit 
   }
   for key in single_subschema_keywords {
     match obj.get(key) {
-      Some(child) => {
+      Some(child) =>
         index_node(v, child, node_base, path + "/" + @pointer.escape_token(key))
-      }
       None => ()
     }
   }
   for key in list_subschema_keywords {
     match obj.get(key) {
-      Some(Array(items)) => {
+      Some(Array(items)) =>
         for i = 0; i < items.length(); i = i + 1 {
           index_node(
             v,
@@ -238,26 +220,27 @@ fn index_node(v : Validator, node : Json, base : String, path : String) -> Unit 
             path + "/" + @pointer.escape_token(key) + "/" + i.to_string(),
           )
         }
-      }
       // `items` 在 2020-12 里是单个 schema；旧草案里才是数组。
-      Some(child) => {
+      Some(child) =>
         index_node(v, child, node_base, path + "/" + @pointer.escape_token(key))
-      }
       None => ()
     }
   }
   for key in map_subschema_keywords {
     match obj_get_obj(obj, key) {
-      Some(members) => {
+      Some(members) =>
         for name, child in members {
           index_node(
             v,
             child,
             node_base,
-            path + "/" + @pointer.escape_token(key) + "/" + @pointer.escape_token(name),
+            path +
+            "/" +
+            @pointer.escape_token(key) +
+            "/" +
+            @pointer.escape_token(name),
           )
         }
-      }
       None => ()
     }
   }
@@ -274,10 +257,7 @@ fn find_document(documents : Array[(String, Json)], uri : String) -> Json? {
   }
   for entry in documents {
     match schema_id(entry.1) {
-      Some(id) =>
-        if id == uri {
-          return Some(entry.1)
-        }
+      Some(id) => if id == uri { return Some(entry.1) }
       None => ()
     }
   }
@@ -383,11 +363,11 @@ fn Validator::build_with(
   // 作为 base，让 `index_node` 自己算出 `root_base`。
   index_node(v, root, "", "")
   // 根文档没有 `$id` 时 `index_node` 不会为它登记资源，这里补上。
-  v.resources.set(root_base, { node: root, path: "", uri: root_base, base: "" })
+  v.resources.set(root_base, { node: root, path: "", uri: root_base, base: "", })
   for entry in documents {
     let (uri, node) = entry
     // 外部文档的「父 base」就是它被取用的那个 URI：`$id` 相对它解析。
-    v.resources.set(uri, { node, path: "", uri, base: uri })
+    v.resources.set(uri, { node, path: "", uri, base: uri, })
     index_node(v, node, uri, "")
   }
   v
@@ -434,7 +414,7 @@ fn Validator::lookup(
           None => start.uri
         }
         // `base` 仍是 `start.uri`：目标节点的 `$id`（如果有）要相对它解析。
-        Hit({ node, path: fragment, uri: target_uri, base: start.uri })
+        Hit({ node, path: fragment, uri: target_uri, base: start.uri, })
       }
       None => Missing(absolute)
     }
@@ -474,10 +454,7 @@ fn Validator::lookup_dynamic(
     return statically
   }
   match schema_dynamic_anchor(target.node) {
-    Some(name) =>
-      if name != fragment {
-        return statically
-      }
+    Some(name) => if name != fragment { return statically }
     None => return statically
   }
   for i = 0; i < self.dynamic_scope.length(); i = i + 1 {
@@ -517,11 +494,7 @@ fn Validator::regex_for(self : Validator, pattern : String) -> @regex.Regex? {
   match self.patterns.get(pattern) {
     Some(cached) => cached
     None => {
-      let compiled = try {
-        Some(@regex.Regex::compile(pattern))
-      } catch {
-        _ => None
-      }
+      let compiled = Some(@regex.Regex::compile(pattern)) catch { _ => None }
       self.patterns.set(pattern, compiled)
       compiled
     }

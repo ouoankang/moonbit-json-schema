@@ -285,8 +285,14 @@ test "get: 在文档里定位" {
   assert_true(json_as_string(get(doc, "/store/bicycle/color")) == "red")
   assert_true(json_as_string(get(doc, "/store/book/1/title")) == "B")
   assert_true(json_as_string(get(doc, "/")) == "empty-key-value")
-  assert_true(opt_is_none(get(doc, "/store/book/2/title")), msg="index out of range")
+  assert_true(
+    opt_is_none(get(doc, "/store/book/2/title")),
+    msg="index out of range",
+  )
   assert_true(opt_is_none(get(doc, "/store/book/-")), msg="'-' is not readable")
   assert_true(opt_is_none(get(doc, "/nope")))
-  assert_true(opt_is_none(get(doc, "/store/book/01")), msg="leading zero rejected")
+  assert_true(
+    opt_is_none(get(doc, "/store/book/01")),
+    msg="leading zero rejected",
+  )
 }

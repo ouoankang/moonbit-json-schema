@@ -25,7 +25,7 @@ pub struct Schema {
 ///|
 /// 编译一份 schema 文档。
 pub fn Schema::of(root : Json) -> Schema {
-  { ctx: Validator::build(root) }
+  { ctx: Validator::build(root), }
 }
 
 ///|
@@ -37,12 +37,15 @@ pub fn Schema::of_with_documents(
   root : Json,
   documents : Array[(String, Json)],
 ) -> Schema {
-  { ctx: Validator::build_with(root, documents) }
+  { ctx: Validator::build_with(root, documents), }
 }
 
 ///|
 /// 用已编译的 schema 校验实例，返回全部错误（空数组表示通过）。
-pub fn Schema::validate(self : Schema, instance : Json) -> Array[ValidationError] {
+pub fn Schema::validate(
+  self : Schema,
+  instance : Json,
+) -> Array[ValidationError] {
   self.ctx.reset()
   // 根文档的 base 传空串：它的 `$id` 相对空 base 解析（`eval_object` 会做
   // 这一步）。传 `root_base` 会让根本身带 `$id` 时把它解析两次。
@@ -76,7 +79,10 @@ pub fn validate_text(
 
 ///|
 /// 从 JSON 文本直接校验，只回答「是否通过」。
-pub fn is_valid_text(schema_text : String, instance_text : String) -> Bool raise {
+pub fn is_valid_text(
+  schema_text : String,
+  instance_text : String,
+) -> Bool raise {
   validate_text(schema_text, instance_text).length() == 0
 }
 
@@ -102,12 +108,7 @@ fn report(
     } else {
       node_path + "/" + @pointer.escape_token(keyword)
     }
-    v.errors.push({
-      instance_path,
-      keyword,
-      schema_path: location,
-      message,
-    })
+    v.errors.push({ instance_path, keyword, schema_path: location, message, })
   }
 }
 
@@ -140,8 +141,9 @@ fn is_multiple_of(value : Double, divisor : Double) -> Bool {
   }
   let floor_q = quotient.floor()
   let tail = quotient - floor_q
-  let tolerance = 1.0e-9 * (if quotient.abs() > 1.0 { quotient.abs() } else { 1.0 })
-  tail <= tolerance || (1.0 - tail) <= tolerance
+  let tolerance = 1.0e-9 *
+    (if quotient.abs() > 1.0 { quotient.abs() } else { 1.0 })
+  tail <= tolerance || 1.0 - tail <= tolerance
 }
 
 ///|
@@ -376,7 +378,9 @@ fn eval(
     Some(_) => outcome_ok()
     None => {
       v.active.set(key, true)
-      let r = eval_node(v, node, base, schema_path, instance, instance_path, collect)
+      let r = eval_node(
+        v, node, base, schema_path, instance, instance_path, collect,
+      )
       v.active.remove(key)
       r
     }
@@ -399,12 +403,7 @@ fn eval_node(
     True => outcome_ok()
     False => {
       report(
-        v,
-        collect,
-        instance_path,
-        "false",
-        schema_path,
-        "boolean schema `false` rejects every instance",
+        v, collect, instance_path, "false", schema_path, "boolean schema `false` rejects every instance",
       )
       outcome_fail()
     }
@@ -488,55 +487,26 @@ fn apply_ref(
 /// validation 词汇表的关键字。元 schema 没声明这个词汇表时，这些关键字
 /// 一律当未知关键字忽略。
 let validation_keywords : Array[String] = [
-  "type",
-  "enum",
-  "const",
-  "multipleOf",
-  "maximum",
-  "exclusiveMaximum",
-  "minimum",
-  "exclusiveMinimum",
-  "maxLength",
-  "minLength",
-  "pattern",
-  "maxItems",
-  "minItems",
-  "uniqueItems",
-  "maxContains",
-  "minContains",
-  "maxProperties",
-  "minProperties",
-  "required",
-  "dependentRequired",
+  "type", "enum", "const", "multipleOf", "maximum", "exclusiveMaximum", "minimum",
+  "exclusiveMinimum", "maxLength", "minLength", "pattern", "maxItems", "minItems",
+  "uniqueItems", "maxContains", "minContains", "maxProperties", "minProperties",
+  "required", "dependentRequired",
 ]
 
 ///|
 /// applicator 词汇表的关键字。
 let applicator_keywords : Array[String] = [
-  "prefixItems",
-  "items",
-  "contains",
-  "additionalProperties",
-  "properties",
-  "patternProperties",
-  "dependentSchemas",
-  "propertyNames",
-  "if",
-  "then",
-  "else",
-  "allOf",
-  "anyOf",
-  "oneOf",
+  "prefixItems", "items", "contains", "additionalProperties", "properties", "patternProperties",
+  "dependentSchemas", "propertyNames", "if", "then", "else", "allOf", "anyOf", "oneOf",
   "not",
   // 2019-09 的旧关键字，2020-12 为兼容而保留（见 `eval_object_body` 里的处理）。
-  "dependencies",
+   "dependencies",
 ]
 
 ///|
 /// unevaluated 词汇表的关键字。
 let unevaluated_keywords : Array[String] = [
-  "unevaluatedItems",
-  "unevaluatedProperties",
+  "unevaluatedItems", "unevaluatedProperties",
 ]
 
 ///|
@@ -601,13 +571,7 @@ fn eval_object(
     None => false
   }
   let r = eval_object_body(
-    v,
-    effective,
-    base,
-    schema_path,
-    instance,
-    instance_path,
-    collect,
+    v, effective, base, schema_path, instance, instance_path, collect,
   )
   if pushed {
     ignore(v.dynamic_scope.pop())
@@ -641,15 +605,8 @@ fn eval_object_body(
     Some(reference) =>
       acc.merge(
         apply_ref(
-          v,
-          node_base,
-          reference,
-          "$ref",
-          schema_path,
-          instance,
-          instance_path,
-          collect,
-          false,
+          v, node_base, reference, "$ref", schema_path, instance, instance_path,
+          collect, false,
         ),
       )
     None => ()
@@ -658,15 +615,8 @@ fn eval_object_body(
     Some(reference) =>
       acc.merge(
         apply_ref(
-          v,
-          node_base,
-          reference,
-          "$dynamicRef",
-          schema_path,
-          instance,
-          instance_path,
-          collect,
-          true,
+          v, node_base, reference, "$dynamicRef", schema_path, instance, instance_path,
+          collect, true,
         ),
       )
     None => ()
@@ -710,12 +660,7 @@ fn eval_object_body(
       }
       if !hit {
         report(
-          v,
-          collect,
-          instance_path,
-          "anyOf",
-          schema_path,
-          "instance does not match any of the subschemas",
+          v, collect, instance_path, "anyOf", schema_path, "instance does not match any of the subschemas",
         )
         acc.ok = false
       }
@@ -745,12 +690,7 @@ fn eval_object_body(
         acc.absorb(winner)
       } else {
         report(
-          v,
-          collect,
-          instance_path,
-          "oneOf",
-          schema_path,
-          "instance must match exactly one subschema",
+          v, collect, instance_path, "oneOf", schema_path, "instance must match exactly one subschema",
         )
         acc.ok = false
       }
@@ -762,21 +702,16 @@ fn eval_object_body(
     // 而失败的求值不留下认领记录。
     Some(sub) =>
       if eval(
-        v,
-        sub,
-        node_base,
-        schema_path + "/not",
-        instance,
-        instance_path,
-        false,
-      ).ok {
-        report(
           v,
-          collect,
+          sub,
+          node_base,
+          schema_path + "/not",
+          instance,
           instance_path,
-          "not",
-          schema_path,
-          "instance must not match the `not` subschema",
+          false,
+        ).ok {
+        report(
+          v, collect, instance_path, "not", schema_path, "instance must not match the `not` subschema",
         )
         acc.ok = false
       }
@@ -837,21 +772,13 @@ fn eval_object_body(
       let mut hit = false
       for candidate in names {
         match candidate {
-          String(name) =>
-            if type_matches(name, instance) {
-              hit = true
-            }
+          String(name) => if type_matches(name, instance) { hit = true }
           _ => ()
         }
       }
       if !hit {
         report(
-          v,
-          collect,
-          instance_path,
-          "type",
-          schema_path,
-          "instance type does not match any of the listed types",
+          v, collect, instance_path, "type", schema_path, "instance type does not match any of the listed types",
         )
         acc.ok = false
       }
@@ -868,12 +795,7 @@ fn eval_object_body(
       }
       if !hit {
         report(
-          v,
-          collect,
-          instance_path,
-          "enum",
-          schema_path,
-          "instance is not one of the enumerated values",
+          v, collect, instance_path, "enum", schema_path, "instance is not one of the enumerated values",
         )
         acc.ok = false
       }
@@ -884,12 +806,7 @@ fn eval_object_body(
     Some(expected) =>
       if !(expected == instance) {
         report(
-          v,
-          collect,
-          instance_path,
-          "const",
-          schema_path,
-          "instance does not equal the const value",
+          v, collect, instance_path, "const", schema_path, "instance does not equal the const value",
         )
         acc.ok = false
       }
@@ -904,12 +821,7 @@ fn eval_object_body(
         Some(m) =>
           if !is_multiple_of(n, m) {
             report(
-              v,
-              collect,
-              instance_path,
-              "multipleOf",
-              schema_path,
-              "value is not a multiple of the divisor",
+              v, collect, instance_path, "multipleOf", schema_path, "value is not a multiple of the divisor",
             )
             acc.ok = false
           }
@@ -919,12 +831,7 @@ fn eval_object_body(
         Some(m) =>
           if !(n <= m) {
             report(
-              v,
-              collect,
-              instance_path,
-              "maximum",
-              schema_path,
-              "value exceeds the maximum",
+              v, collect, instance_path, "maximum", schema_path, "value exceeds the maximum",
             )
             acc.ok = false
           }
@@ -934,12 +841,7 @@ fn eval_object_body(
         Some(m) =>
           if !(n < m) {
             report(
-              v,
-              collect,
-              instance_path,
-              "exclusiveMaximum",
-              schema_path,
-              "value must be strictly less than exclusiveMaximum",
+              v, collect, instance_path, "exclusiveMaximum", schema_path, "value must be strictly less than exclusiveMaximum",
             )
             acc.ok = false
           }
@@ -949,12 +851,7 @@ fn eval_object_body(
         Some(m) =>
           if !(n >= m) {
             report(
-              v,
-              collect,
-              instance_path,
-              "minimum",
-              schema_path,
-              "value is below the minimum",
+              v, collect, instance_path, "minimum", schema_path, "value is below the minimum",
             )
             acc.ok = false
           }
@@ -964,12 +861,7 @@ fn eval_object_body(
         Some(m) =>
           if !(n > m) {
             report(
-              v,
-              collect,
-              instance_path,
-              "exclusiveMinimum",
-              schema_path,
-              "value must be strictly greater than exclusiveMinimum",
+              v, collect, instance_path, "exclusiveMinimum", schema_path, "value must be strictly greater than exclusiveMinimum",
             )
             acc.ok = false
           }
@@ -989,12 +881,7 @@ fn eval_object_body(
         Some(m) =>
           if length > m {
             report(
-              v,
-              collect,
-              instance_path,
-              "maxLength",
-              schema_path,
-              "string is longer than maxLength (counted in Unicode code points)",
+              v, collect, instance_path, "maxLength", schema_path, "string is longer than maxLength (counted in Unicode code points)",
             )
             acc.ok = false
           }
@@ -1004,12 +891,7 @@ fn eval_object_body(
         Some(m) =>
           if length < m {
             report(
-              v,
-              collect,
-              instance_path,
-              "minLength",
-              schema_path,
-              "string is shorter than minLength (counted in Unicode code points)",
+              v, collect, instance_path, "minLength", schema_path, "string is shorter than minLength (counted in Unicode code points)",
             )
             acc.ok = false
           }
@@ -1042,12 +924,7 @@ fn eval_object_body(
         Some(m) =>
           if items.length().to_double() > m {
             report(
-              v,
-              collect,
-              instance_path,
-              "maxItems",
-              schema_path,
-              "array has more items than maxItems",
+              v, collect, instance_path, "maxItems", schema_path, "array has more items than maxItems",
             )
             acc.ok = false
           }
@@ -1057,12 +934,7 @@ fn eval_object_body(
         Some(m) =>
           if items.length().to_double() < m {
             report(
-              v,
-              collect,
-              instance_path,
-              "minItems",
-              schema_path,
-              "array has fewer items than minItems",
+              v, collect, instance_path, "minItems", schema_path, "array has fewer items than minItems",
             )
             acc.ok = false
           }
@@ -1072,12 +944,7 @@ fn eval_object_body(
         Some(True) =>
           if has_duplicate(items) {
             report(
-              v,
-              collect,
-              instance_path,
-              "uniqueItems",
-              schema_path,
-              "array items are not unique",
+              v, collect, instance_path, "uniqueItems", schema_path, "array items are not unique",
             )
             acc.ok = false
           }
@@ -1148,14 +1015,14 @@ fn eval_object_body(
           for i = 0; i < items.length(); i = i + 1 {
             let child_instance = instance_path + "/" + i.to_string()
             if eval(
-              v,
-              contains_schema,
-              node_base,
-              schema_path + "/contains",
-              items[i],
-              child_instance,
-              false,
-            ).ok {
+                v,
+                contains_schema,
+                node_base,
+                schema_path + "/contains",
+                items[i],
+                child_instance,
+                false,
+              ).ok {
               count = count + 1
               matched_indices.push(i)
             }
@@ -1175,23 +1042,13 @@ fn eval_object_body(
           }
           if !contains_ok {
             report(
-              v,
-              collect,
-              instance_path,
-              "contains",
-              schema_path,
-              "not enough array items match `contains`",
+              v, collect, instance_path, "contains", schema_path, "not enough array items match `contains`",
             )
             acc.ok = false
           }
           if !within_max {
             report(
-              v,
-              collect,
-              instance_path,
-              "maxContains",
-              schema_path,
-              "too many array items match `contains`",
+              v, collect, instance_path, "maxContains", schema_path, "too many array items match `contains`",
             )
             acc.ok = false
           }
@@ -1220,12 +1077,7 @@ fn eval_object_body(
         Some(m) =>
           if members.length().to_double() > m {
             report(
-              v,
-              collect,
-              instance_path,
-              "maxProperties",
-              schema_path,
-              "object has more properties than maxProperties",
+              v, collect, instance_path, "maxProperties", schema_path, "object has more properties than maxProperties",
             )
             acc.ok = false
           }
@@ -1235,12 +1087,7 @@ fn eval_object_body(
         Some(m) =>
           if members.length().to_double() < m {
             report(
-              v,
-              collect,
-              instance_path,
-              "minProperties",
-              schema_path,
-              "object has fewer properties than minProperties",
+              v, collect, instance_path, "minProperties", schema_path, "object has fewer properties than minProperties",
             )
             acc.ok = false
           }
@@ -1284,9 +1131,7 @@ fn eval_object_body(
                     v,
                     sub,
                     node_base,
-                    schema_path +
-                    "/properties/" +
-                    @pointer.escape_token(name),
+                    schema_path + "/properties/" + @pointer.escape_token(name),
                     value,
                     instance_path + "/" + @pointer.escape_token(name),
                     collect,

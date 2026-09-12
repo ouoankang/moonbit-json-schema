@@ -19,40 +19,49 @@
 // 平台 FFI
 // ---------------------------------------------------------------------------
 
+///|
 #cfg(target="js")
 extern "js" fn program_args() -> FixedArray[String] =
   #| () => process.argv.slice(2)
 
+///|
 #cfg(target="js")
 extern "js" fn file_exists(path : String) -> Bool =
   #| (p) => { try { return require("fs").statSync(p).isFile(); } catch (e) { return false; } }
 
+///|
 #cfg(target="js")
 extern "js" fn read_text(path : String) -> String =
   #| (p) => require("fs").readFileSync(p, "utf8")
 
+///|
 #cfg(target="js")
 extern "js" fn set_exit_code(code : Int) -> Unit =
   #| (c) => { process.exitCode = c }
 
 // 非 js 后端给空实现，这样 `moon check` 在任何目标上都不会因为缺 FFI 而失败。
+
+///|
 #cfg(not(target="js"))
 fn program_args() -> FixedArray[String] {
   []
 }
 
+///|
 #cfg(not(target="js"))
 fn file_exists(path : String) -> Bool {
   ignore(path)
   false
 }
 
+///|
 #cfg(not(target="js"))
 fn read_text(path : String) -> String {
   ignore(path)
   ""
 }
 
+///|
 #cfg(not(target="js"))
 fn set_exit_code(code : Int) -> Unit {
   ignore(code)
@@ -99,9 +108,7 @@ fn load_json(path : String) -> Json? {
     return None
   }
   let text = read_text(path)
-  let parsed = try {
-    Some(@json.parse(text))
-  } catch {
+  let parsed = Some(@json.parse(text)) catch {
     e => {
       println("  JSON 解析失败: " + path)
       println("    " + e.to_string())
@@ -116,17 +123,27 @@ fn usage() -> Unit {
   println("moonbit-json-schema —— JSON Schema draft 2020-12 校验器")
   println("")
   println("用法:")
-  println("  validate <schema.json> <instance.json>...   用 schema 校验实例")
-  println("  lint     <schema.json>...                   检查 schema 自身是否合法")
-  println("  metaschema                                  导出内置的官方元 schema")
+  println(
+    "  validate <schema.json> <instance.json>...   用 schema 校验实例",
+  )
+  println(
+    "  lint     <schema.json>...                   检查 schema 自身是否合法",
+  )
+  println(
+    "  metaschema                                  导出内置的官方元 schema",
+  )
   println("")
   println("选项:")
   println("  --quiet    只输出结论，不列出每条错误")
   println("")
-  println("退出码: 0 通过 / 1 不通过 / 2 用法错误 / 3 读文件或解析失败")
+  println(
+    "退出码: 0 通过 / 1 不通过 / 2 用法错误 / 3 读文件或解析失败",
+  )
   println("")
   println("示例:")
-  println("  moon run --target js cmd/main -- validate examples/person.schema.json examples/person.ok.json")
+  println(
+    "  moon run --target js cmd/main -- validate examples/person.schema.json examples/person.ok.json",
+  )
 }
 
 ///|
@@ -138,12 +155,7 @@ fn print_error(e : @schema.ValidationError, quiet : Bool) -> Unit {
   let at = if e.instance_path == "" { "/" } else { e.instance_path }
   // 列宽 30 是照着「最长的实例路径也放得下」定的；超长时宁可让它顶开
   // 关键字那一列，也不要两个字段粘成一个词。
-  println(
-    "        " +
-    pad_right(at, 30) +
-    pad_right(e.keyword, 20) +
-    e.message,
-  )
+  println("        " + pad_right(at, 30) + pad_right(e.keyword, 20) + e.message)
 }
 
 // ---------------------------------------------------------------------------
@@ -231,7 +243,9 @@ fn cmd_lint(rest : Array[String], quiet : Bool) -> Unit {
   let meta_node = match find_metaschema(docs) {
     Some(m) => m
     None => {
-      println("内部错误: 内置元 schema 不完整，找不到根元 schema。")
+      println(
+        "内部错误: 内置元 schema 不完整，找不到根元 schema。",
+      )
       set_exit_code(EXIT_IO)
       return
     }
@@ -265,7 +279,9 @@ fn cmd_lint(rest : Array[String], quiet : Bool) -> Unit {
   }
   if bad > 0 {
     println("")
-    println("结果: 有 " + bad.to_string() + " 份 schema 不符合元 schema。")
+    println(
+      "结果: 有 " + bad.to_string() + " 份 schema 不符合元 schema。",
+    )
     set_exit_code(EXIT_FAILED)
   }
 }

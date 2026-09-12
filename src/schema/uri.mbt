@@ -107,7 +107,7 @@ fn parse_uri(uri : String) -> UriParts {
     (None, after_scheme)
   }
   let path = slice(uri, path_start, path_end)
-  { scheme, authority, path, query, fragment }
+  { scheme, authority, path, query, fragment, }
 }
 
 ///|
@@ -382,7 +382,9 @@ pub fn percent_decode(s : String) -> String {
 ///|
 test "resolve: 片段与相对路径" {
   let base = "http://example.com/a/b/c.json"
-  assert_true(resolve(base, "#/$defs/x") == "http://example.com/a/b/c.json#/$defs/x")
+  assert_true(
+    resolve(base, "#/$defs/x") == "http://example.com/a/b/c.json#/$defs/x",
+  )
   assert_true(resolve(base, "") == "http://example.com/a/b/c.json")
   assert_true(resolve(base, "d.json") == "http://example.com/a/b/d.json")
   assert_true(resolve(base, "./d.json") == "http://example.com/a/b/d.json")

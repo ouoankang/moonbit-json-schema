@@ -15,6 +15,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const projectRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // 30 个一般类别。顺序无关紧要——划分保证唯一命中。
 const CATS = [
@@ -112,3 +116,12 @@ fs.mkdirSync(path.dirname(outPath), { recursive: true });
 fs.writeFileSync(outPath, lines.join("\n"), "utf8");
 
 console.log("runs=" + runs.length + "  unmatched=" + unmatched + "  bytes=" + fs.statSync(outPath).size);
+
+// 再跑一次格式化器，只针对刚写出的这个文件。
+//
+// 生成器是机械拼字符串的，拼出来的排版不一定符合 moon fmt 的规则。
+// 不统一的话会陷入「手动 `moon fmt` 改动它 → 重新生成又改回来」的
+// 来回漂移，CI 里「重新生成后工作区是否干净」这条检查就永远有噪音。
+//
+// 只传这一个文件路径，避免顺手格式化掉别人未提交的改动。
+execFileSync("moon", ["fmt", outPath], { cwd: projectRoot, stdio: "inherit" });

@@ -56,7 +56,9 @@ test "uniqueItems: 1 与 1.0 视为重复" {
   assert_true(accepts("{\"uniqueItems\":true}", "[1,2]"))
   assert_false(accepts("{\"uniqueItems\":true}", "[{\"a\":1},{\"a\":1}]"))
   // 键顺序不同但内容相同，仍算重复
-  assert_false(accepts("{\"uniqueItems\":true}", "[{\"a\":1,\"b\":2},{\"b\":2,\"a\":1}]"))
+  assert_false(
+    accepts("{\"uniqueItems\":true}", "[{\"a\":1,\"b\":2},{\"b\":2,\"a\":1}]"),
+  )
 }
 
 ///|
@@ -73,7 +75,10 @@ test "required / properties / additionalProperties" {
   assert_true(accepts(schema, "{\"a\":\"x\"}"))
   assert_false(accepts(schema, "{}"), msg="missing required")
   assert_false(accepts(schema, "{\"a\":1}"), msg="wrong type")
-  assert_false(accepts(schema, "{\"a\":\"x\",\"b\":1}"), msg="additional property")
+  assert_false(
+    accepts(schema, "{\"a\":\"x\",\"b\":1}"),
+    msg="additional property",
+  )
   assert_true(accepts("{}", "{\"anything\":1}"), msg="空 schema 接受一切")
 }
 
@@ -81,7 +86,10 @@ test "required / properties / additionalProperties" {
 test "patternProperties 与 additionalProperties 的覆盖关系" {
   let schema = "{\"patternProperties\":{\"^x-\":{\"type\":\"number\"}},\"additionalProperties\":{\"type\":\"string\"}}"
   assert_true(accepts(schema, "{\"x-1\":5,\"other\":\"s\"}"))
-  assert_false(accepts(schema, "{\"x-1\":\"s\"}"), msg="pattern 命中要求 number")
+  assert_false(
+    accepts(schema, "{\"x-1\":\"s\"}"),
+    msg="pattern 命中要求 number",
+  )
   assert_false(accepts(schema, "{\"other\":5}"), msg="未命中要求 string")
 }
 
@@ -99,21 +107,42 @@ test "prefixItems 与 items 的分工（2020-12 语义）" {
 test "contains / minContains / maxContains" {
   assert_true(accepts("{\"contains\":{\"const\":1}}", "[1,2]"))
   assert_false(accepts("{\"contains\":{\"const\":1}}", "[2,3]"))
-  assert_true(accepts("{\"contains\":{\"const\":1},\"minContains\":2}", "[1,1]"))
-  assert_false(accepts("{\"contains\":{\"const\":1},\"minContains\":2}", "[1,2]"))
-  assert_false(accepts("{\"contains\":{\"const\":1},\"maxContains\":1}", "[1,1]"))
+  assert_true(
+    accepts("{\"contains\":{\"const\":1},\"minContains\":2}", "[1,1]"),
+  )
+  assert_false(
+    accepts("{\"contains\":{\"const\":1},\"minContains\":2}", "[1,2]"),
+  )
+  assert_false(
+    accepts("{\"contains\":{\"const\":1},\"maxContains\":1}", "[1,1]"),
+  )
   // minContains: 0 使得 contains 恒真
   assert_true(accepts("{\"contains\":{\"const\":1},\"minContains\":0}", "[2]"))
 }
 
 ///|
 test "组合关键字" {
-  assert_true(accepts("{\"allOf\":[{\"type\":\"integer\"},{\"minimum\":3}]}", "5"))
-  assert_false(accepts("{\"allOf\":[{\"type\":\"integer\"},{\"minimum\":3}]}", "1"))
-  assert_true(accepts("{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"integer\"}]}", "1"))
-  assert_false(accepts("{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"integer\"}]}", "true"))
-  assert_true(accepts("{\"oneOf\":[{\"type\":\"integer\"},{\"minimum\":3}]}", "1"))
-  assert_false(accepts("{\"oneOf\":[{\"type\":\"integer\"},{\"minimum\":3}]}", "5"), msg="两个都满足")
+  assert_true(
+    accepts("{\"allOf\":[{\"type\":\"integer\"},{\"minimum\":3}]}", "5"),
+  )
+  assert_false(
+    accepts("{\"allOf\":[{\"type\":\"integer\"},{\"minimum\":3}]}", "1"),
+  )
+  assert_true(
+    accepts("{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"integer\"}]}", "1"),
+  )
+  assert_false(
+    accepts(
+      "{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"integer\"}]}", "true",
+    ),
+  )
+  assert_true(
+    accepts("{\"oneOf\":[{\"type\":\"integer\"},{\"minimum\":3}]}", "1"),
+  )
+  assert_false(
+    accepts("{\"oneOf\":[{\"type\":\"integer\"},{\"minimum\":3}]}", "5"),
+    msg="两个都满足",
+  )
   assert_true(accepts("{\"not\":{\"type\":\"string\"}}", "1"))
   assert_false(accepts("{\"not\":{\"type\":\"string\"}}", "\"a\""))
 }
@@ -140,7 +169,10 @@ test "$ref: 指针引用与 $defs" {
 test "$ref: 与兄弟关键字同时生效（2020-12）" {
   let schema = "{\"$defs\":{\"s\":{\"type\":\"string\"}},\"$ref\":\"#/$defs/s\",\"minLength\":3}"
   assert_true(accepts(schema, "\"abc\""))
-  assert_false(accepts(schema, "\"ab\""), msg="兄弟关键字 minLength 必须生效")
+  assert_false(
+    accepts(schema, "\"ab\""),
+    msg="兄弟关键字 minLength 必须生效",
+  )
   assert_false(accepts(schema, "1"), msg="$ref 目标必须生效")
 }
 
@@ -174,15 +206,15 @@ test "布尔 schema" {
 test "注解关键字不参与断言" {
   // format 在 2020-12 中默认是注解，不应因格式不符而失败
   assert_true(accepts("{\"format\":\"email\"}", "\"not-an-email\""))
-  assert_true(accepts("{\"title\":\"t\",\"description\":\"d\",\"default\":1}", "\"x\""))
+  assert_true(
+    accepts("{\"title\":\"t\",\"description\":\"d\",\"default\":1}", "\"x\""),
+  )
   assert_true(accepts("{\"$comment\":\"hi\"}", "1"))
 }
 
 ///|
 test "错误信息带上位置与关键字" {
-  let schema = parse_json(
-    "{\"properties\":{\"n\":{\"minimum\":3}}}",
-  )
+  let schema = parse_json("{\"properties\":{\"n\":{\"minimum\":3}}}")
   let instance = parse_json("{\"n\":1}")
   let errors = validate(schema, instance)
   assert_true(errors.length() == 1)

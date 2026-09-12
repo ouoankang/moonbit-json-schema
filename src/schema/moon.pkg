@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/json",
-  "ouoankang/moonbit-json-schema/src/pointer" @pointer,
-  "ouoankang/moonbit-json-schema/src/regex" @regex,
+  "ouoankang/moonbit-json-schema/src/pointer",
+  "ouoankang/moonbit-json-schema/src/regex",
 }

@@ -16,11 +16,12 @@ fn remote_doc(s : String) -> Json raise {
 ///|
 test "跨文档 $ref：远程文档根" {
   let remote = remote_doc("{\"type\":\"integer\"}")
-  let root = remote_doc("{\"$ref\":\"http://localhost:1234/draft2020-12/integer.json\"}")
-  let s = Schema::of_with_documents(
-    root,
-    [("http://localhost:1234/draft2020-12/integer.json", remote)],
+  let root = remote_doc(
+    "{\"$ref\":\"http://localhost:1234/draft2020-12/integer.json\"}",
   )
+  let s = Schema::of_with_documents(root, [
+    ("http://localhost:1234/draft2020-12/integer.json", remote),
+  ])
   assert_true(s.validate(remote_doc("1")).length() == 0)
   assert_true(s.validate(remote_doc("\"a\"")).length() > 0)
 }
@@ -33,10 +34,9 @@ test "跨文档 $ref：带 fragment 的远程文档" {
   let root = remote_doc(
     "{\"$ref\":\"http://localhost:1234/draft2020-12/subSchemas.json#/$defs/integer\"}",
   )
-  let s = Schema::of_with_documents(
-    root,
-    [("http://localhost:1234/draft2020-12/subSchemas.json", remote)],
-  )
+  let s = Schema::of_with_documents(root, [
+    ("http://localhost:1234/draft2020-12/subSchemas.json", remote),
+  ])
   assert_true(s.validate(remote_doc("1")).length() == 0)
   assert_true(s.validate(remote_doc("\"a\"")).length() > 0)
 }
@@ -51,15 +51,9 @@ test "跨文档 $ref：文档 $id 与取用 URI 不同的别名" {
   let root = remote_doc(
     "{\"$ref\":\"http://localhost:1234/draft2020-12/different-id-ref-string.json\"}",
   )
-  let s = Schema::of_with_documents(
-    root,
-    [
-      (
-        "http://localhost:1234/draft2020-12/different-id-ref-string.json",
-        remote,
-      ),
-    ],
-  )
+  let s = Schema::of_with_documents(root, [
+    ("http://localhost:1234/draft2020-12/different-id-ref-string.json", remote),
+  ])
   assert_true(s.validate(remote_doc("\"foo\"")).length() == 0)
   assert_true(s.validate(remote_doc("1")).length() > 0)
 }
@@ -74,15 +68,11 @@ test "跨文档 $ref：文档内的绝对 $id 子资源" {
   let root = remote_doc(
     "{\"$ref\":\"http://localhost:1234/draft2020-12/nested-absolute-ref-to-string.json\"}",
   )
-  let s = Schema::of_with_documents(
-    root,
-    [
-      (
-        "http://localhost:1234/draft2020-12/nested-absolute-ref-to-string.json",
-        remote,
-      ),
-    ],
-  )
+  let s = Schema::of_with_documents(root, [
+    (
+      "http://localhost:1234/draft2020-12/nested-absolute-ref-to-string.json", remote,
+    ),
+  ])
   assert_true(s.validate(remote_doc("\"foo\"")).length() == 0)
   assert_true(s.validate(remote_doc("1")).length() > 0)
 }
@@ -95,10 +85,9 @@ test "跨文档 $ref：remote $ref 里再 $ref" {
   let root = remote_doc(
     "{\"$id\":\"http://localhost:1234/draft2020-12/schema-remote-ref-ref-defs1.json\",\"$ref\":\"ref-and-defs.json\"}",
   )
-  let s = Schema::of_with_documents(
-    root,
-    [("http://localhost:1234/draft2020-12/ref-and-defs.json", inner)],
-  )
+  let s = Schema::of_with_documents(root, [
+    ("http://localhost:1234/draft2020-12/ref-and-defs.json", inner),
+  ])
   assert_true(s.validate(remote_doc("{\"bar\":\"a\"}")).length() == 0)
   assert_true(s.validate(remote_doc("{\"bar\":1}")).length() > 0)
 }
