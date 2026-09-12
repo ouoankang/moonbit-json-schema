@@ -513,6 +513,9 @@ if !v.vocab_unevaluated { effective = without_keywords(effective, unevaluated_ke
   静默错误」的阶段：环判据那个 bug 让 6 条远程引用用例被跳过。它是靠
   `JSTS_VERBOSE=1` 逐条核对「期望 / 实际」而不是只看百分比找到的。
 
+完整的开发历程回顾（过程、弯路、AI 分工、取舍）见
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+
 ---
 
 ## 许可
