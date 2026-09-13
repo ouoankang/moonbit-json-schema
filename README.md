@@ -1,16 +1,32 @@
-# moonbit-json-schema
+# moonbit-regex（原 moonbit-json-schema）
 
-**用 MoonBit 从零实现的 JSON Schema draft 2020-12 校验器。**
+**严格 ECMA-262 语义的正则引擎，用 MoonBit 从零实现，跨 wasm／js／native 三后端结果一致。**
+
+附带一个 JSON Schema draft 2020-12 校验器，作为引擎的**验证测试床**。
 
 [![MoonBit](https://img.shields.io/badge/MoonBit-0.6-blue)](https://www.moonbitlang.com/)
 [![license](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
 | 指标 | 结果 |
 | --- | --- |
-| 官方一致性套件 · 必测用例 | **1301 / 1301（100.0%）** |
-| 官方一致性套件 · 可选用例 | 929 / 1023（90.8%，未实现 IDN/IRI 与跨草案，见[已知限制](#已知限制)） |
+| ECMA-262 语义用例 | **ecmascript-regex.json 86/86**、**non-bmp-regex.json 12/12** |
+| 官方一致性套件 · 必测用例 | 1301 / 1301（100.0%，校验器测试床） |
+| 官方一致性套件 · 可选用例 | 929 / 1023（90.8%） |
 | 单元测试 | 61 / 61 通过（默认 `wasm` 目标） |
 | 自写源码 | 约 5 600 行 MoonBit（不含生成的 Unicode 表与元 schema） |
+
+---
+
+## 一句话定位
+
+正则表达式在跨语言时语义不一致：`\d`／`\w`／`\s` 是否只认 ASCII、emoji 按一个
+码点还是两个码元计，直接决定匹配结果。JSON Schema 的 `pattern` 关键字明确要求
+**严格 ECMA-262（JavaScript）语义**。
+
+MoonBit 官方已有通用正则库 `moonbitlang/regexp`，但它是**通用引擎，不承诺
+ECMA-262 语义**（其 README 仅自述"部分对齐 JavaScript"）。本项目的核心是填补
+这个空白：一个**严格实现 ECMA-262 语义、跨三后端结果完全一致的正则引擎**
+（`src/regex`，约 1300 行，零宿主正则依赖）。
 
 ---
 
@@ -31,25 +47,30 @@
 
 ## 这个项目解决什么问题
 
-JSON Schema 是描述 JSON 数据形状的通用契约语言：OpenAPI、CI 配置、包清单、
-编辑器插件配置，几乎都是用它写的。它的实现遍布各种语言——Python 的
-`jsonschema`、Go 的 `santhosh-tekuri/jsonschema`、Rust 的 `jsonschema-rs`。
+正则表达式在跨语言时语义不一致，而很多场景要求「严格 ECMA-262（JavaScript）
+语义」：
 
-MoonBit 生态里已有 `moonbit-jsonschema`（Xu107-hhh）等符合 2020-12 的
-校验器。`moonbit-json-schema` **不重复造轮子**，而是聚焦它们明确声明不做、
-或尚未覆盖的四块能力，做成一套互补的工程质量工具链（详见
-[与现有实现的差异](#与现有-moonbit-实现的差异)）：
+- JSON Schema 的 `pattern` 关键字明确要求按 ECMA-262 解释——`\d` 只认 ASCII
+  数字，而不少语言的正则把它当 Unicode 数字；`🐲` 这类非 BMP 字符必须按
+  **一个码点**计，而不是 UTF-16 的**两个码元**；
+- 任何需要「同一模式在 wasm／js／native 结果一致」的场景，都不能依赖宿主
+  正则（`wasm` 目标上干脆没有宿主正则）。
 
-- **自研 ECMA-262 正则引擎**——`pattern` 要求按 ECMA-262 语义解释，而
-  `wasm` 目标上没有宿主正则可用；现成库的行为在跨后端时未必一致，所以
-  这里自己实现（约 1300 行），并且**作为独立包可单独复用**，不限于校验器；
-- **`$vocabulary` 词汇表**——自定义元 schema 通过 `$vocabulary` 决定关键字
-  是否生效，这是对方明确列为「不支持」的已知限制；
-- **`format` 断言**——`format` 默认是注解，但这里实现了 15 个格式的**真实
-  校验**（email / ipv4 / uri / uuid / date-time …），而非只当注解；
-- **`lint` 子命令**——内置 9 份官方元 schema，直接**校验 schema 本身写得
-  对不对**：`{"type":"sting"}` 这种笔误在校验实例时永远不报错，只有拿元
-  schema 校验一遍才会暴露。
+MoonBit 官方已有通用正则库 `moonbitlang/regexp`（基于 Russ Cox 的 VM 模型），
+但它是一个**通用引擎，不承诺 ECMA-262 语义**——它的 README 只自述在个别
+角落（空字符类）「跟随 JavaScript 解释」，并没有系统性地保证 `\d`/`\w` 的
+ASCII 语义、按码点推进、恒等转义限制这些 ECMA-262 的关键差异点。
+
+**本项目（`src/regex`）填补这个空白**：一个严格实现 ECMA-262 语义、跨三后端
+结果完全一致的正则引擎。正确性用官方测试套件里**专门针对 ECMA-262 语义分歧**
+的用例证明：
+
+- `optional/ecmascript-regex.json` —— **86/86（100%）**
+- `optional/non-bmp-regex.json` —— **12/12（100%）**
+
+仓库里还带了一个 JSON Schema draft 2020-12 校验器（必测 1301/1301），它是
+**引擎的验证测试床**——用真实场景证明引擎的正确性，而不是与生态里已有的
+校验器竞争。
 
 想先看效果再读代码：打开 `web/index.html`（双击即可，无需构建），
 浏览器里跑的就是这份实现本身。
@@ -58,44 +79,18 @@ MoonBit 生态里已有 `moonbit-jsonschema`（Xu107-hhh）等符合 2020-12 的
 
 ## 与现有 MoonBit 实现的差异
 
-MoonBit 生态中与本项目最接近的是
-[`Xu107-hhh/moonbit-jsonschema`](https://github.com/Xu107-hhh/moonbit-jsonschema)
-（官方套件 1307/1307，Apache-2.0）。本项目**明确承认与其存在功能重叠**
-（都是 2020-12 校验器），但聚焦以下对方未覆盖、或在其 README 中明确声明
-不做的能力，形成互补：
+本项目**不是**又一个 JSON Schema 校验器。它的核心定位是「严格 ECMA-262
+正则引擎」，与现有 MoonBit 项目零重叠：
 
-| 能力 | `moonbit-jsonschema`（对方） | `moonbit-json-schema`（本项目） |
+| 项目 | 定位 | 与本文本的关系 |
 | --- | --- | --- |
-| 正则引擎 | 依赖现成库 `moonbitlang/regexp` | **自研 ECMA-262 引擎**，约 1300 行，跨 wasm／js／native 语义一致，可独立复用 |
-| `$vocabulary` | **不支持**（其 README「已知限制」明确列出） | **完整支持**，`vocabulary.json` 5/5 |
-| `format` 断言 | 仅注解（2020-12 默认语义） | **15 个格式真实校验**，可选用例 929/1023 |
-| 元 schema lint | 内嵌 metaschema，未提供 lint 入口 | **`lint` 子命令**，校验 schema 自身合法性 |
-| 一致性调试 | 用 `gen_suite.py` 生成一次性测试 | **可交互测试台**：`JSTS_ONLY`／`JSTS_VERBOSE` 逐条定位 |
+| `moonbitlang/regexp`（官方） | 通用正则引擎 | **不承诺 ECMA-262 语义**；本项目补严格语义这一层 |
+| `Xu107-hhh/moonbit-jsonschema` | JSON Schema 校验器 | 依赖 `moonbitlang/regexp`，其 `pattern` 语义不保证 ECMA-262；本项目校验器仅为测试床 |
+| `moon_zod` / `moonschema` | Zod 风格构建器 | 不同范式，不相关 |
 
-互补价值的落点：对方解决「校验一份实例」，本项目补「写 schema 的人与调试
-实现的人真正需要的工具」——自研正则引擎（跨后端一致性 + 可独立复用的
-通用组件）、`$vocabulary`（自定义元 schema 场景）、`format` 断言（真实数据
-格式校验）、`lint`（schema 自检）。
-
-下面两个命令可直接复现「对方没有的能力」：
-
-```sh
-# 1. $vocabulary：这份自定义元 schema 关闭了 validation 词汇表，
-#    于是 user.schema.json 里的 minimum:18 失效，age:12 通过（对方不支持）
-moon run --target js cmd/main -- validate \
-  --metaschema examples/vocabulary/meta-no-validation.schema.json \
-  examples/vocabulary/user.schema.json \
-  examples/vocabulary/user.ok.json
-# => 通过
-
-# 2. format 断言：这份元 schema 声明了 format-assertion，
-#    于是 email/uri/ipv4 被真实校验，三个非法值逐条报错（对方只当注解）
-moon run --target js cmd/main -- validate \
-  --metaschema examples/format-assertion/meta-format-assertion.schema.json \
-  examples/format-assertion/contact.schema.json \
-  examples/format-assertion/contact.bad.json
-# => 不通过（3 处）：/email、/website、/ip 各一条 format 错误
-```
+一个可验证的差异点：官方 `ecmascript-regex.json` 用例要求 `\d` 只匹配 ASCII
+数字、`🐲` 按一个码点计——`moonbitlang/regexp` 未承诺这些，而本项目
+`src/regex` 全部通过（86/86）。
 
 ---
 

@@ -30,4 +30,4 @@ keywords = [
 
 preferred_target = "wasm"
 
-description = "JSON Schema draft 2020-12 validator: 1301/1301 official conformance tests, with a self-contained ECMA-262 regex engine and the official meta-schemas built in."
+description = "Strict ECMA-262 regular expression engine for MoonBit (cross-backend consistent), with a JSON Schema 2020-12 validator as its conformance testbed (1301/1301)."
