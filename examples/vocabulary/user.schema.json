@@ -1,0 +1,12 @@
+{
+  "$id": "https://example.com/vocabulary/user.schema.json",
+  "$schema": "https://example.com/meta/no-validation.schema.json",
+  "type": "object",
+  "properties": {
+    "age": {
+      "type": "integer",
+      "minimum": 18
+    }
+  },
+  "required": ["age"]
+}

@@ -1,0 +1,12 @@
+{
+  "$id": "https://example.com/format-assertion/contact.schema.json",
+  "$schema": "https://example.com/meta/format-assertion.schema.json",
+  "type": "object",
+  "required": ["email", "website", "ip"],
+  "properties": {
+    "email": { "type": "string", "format": "email" },
+    "website": { "type": "string", "format": "uri" },
+    "ip": { "type": "string", "format": "ipv4" },
+    "id": { "type": "string", "format": "uuid" }
+  }
+}

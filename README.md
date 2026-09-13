@@ -17,6 +17,7 @@
 ## 目录
 
 - [这个项目解决什么问题](#这个项目解决什么问题)
+- [与现有 MoonBit 实现的差异](#与现有-moonbit-实现的差异)
 - [快速开始](#快速开始)
 - [覆盖了哪些关键字](#覆盖了哪些关键字)
 - [一致性测试成绩](#一致性测试成绩)
@@ -32,25 +33,69 @@
 
 JSON Schema 是描述 JSON 数据形状的通用契约语言：OpenAPI、CI 配置、包清单、
 编辑器插件配置，几乎都是用它写的。它的实现遍布各种语言——Python 的
-`jsonschema`、Go 的 `santhosh-tekuri/jsonschema`、Rust 的 `jsonschema-rs`——
-唯独 MoonBit 生态里还没有一个完整的 draft 2020-12 实现。
+`jsonschema`、Go 的 `santhosh-tekuri/jsonschema`、Rust 的 `jsonschema-rs`。
 
-`moonbit-json-schema` 补上这一块。它不是「够用就行」的简化版，而是把规范里
-真正难的几块都做完了：
+MoonBit 生态里已有 `moonbit-jsonschema`（Xu107-hhh）等符合 2020-12 的
+校验器。`moonbit-json-schema` **不重复造轮子**，而是聚焦它们明确声明不做、
+或尚未覆盖的四块能力，做成一套互补的工程质量工具链（详见
+[与现有实现的差异](#与现有-moonbit-实现的差异)）：
 
-- **URI 解析**（RFC 3986 §5.2）与 **JSON Pointer**（RFC 6901）——`$ref` 不是字符串匹配；
-- **注解传播模型**——`unevaluatedProperties` / `unevaluatedItems` 的全部语义；
-- **动态作用域**——`$dynamicAnchor` / `$dynamicRef`；
-- **方言与词汇表**——`$schema` 指向的元 schema 通过 `$vocabulary` 决定关键字是否生效；
-- **一套自己写的 ECMA-262 正则引擎**——`pattern` 要求按 ECMA-262 语义解释，
-  而 `wasm` 目标上没有宿主正则可用，只能自己实现。
-
-顺带它还内置了官方元 schema 系列文档，所以除了「校验实例」，它还能
-**检查一份 schema 本身写得对不对**（`lint`）——`{"type":"sting"}` 这种笔误
-在校验实例时永远不会报错，只有拿元 schema 校验一遍才会暴露。
+- **自研 ECMA-262 正则引擎**——`pattern` 要求按 ECMA-262 语义解释，而
+  `wasm` 目标上没有宿主正则可用；现成库的行为在跨后端时未必一致，所以
+  这里自己实现（约 1300 行），并且**作为独立包可单独复用**，不限于校验器；
+- **`$vocabulary` 词汇表**——自定义元 schema 通过 `$vocabulary` 决定关键字
+  是否生效，这是对方明确列为「不支持」的已知限制；
+- **`format` 断言**——`format` 默认是注解，但这里实现了 15 个格式的**真实
+  校验**（email / ipv4 / uri / uuid / date-time …），而非只当注解；
+- **`lint` 子命令**——内置 9 份官方元 schema，直接**校验 schema 本身写得
+  对不对**：`{"type":"sting"}` 这种笔误在校验实例时永远不报错，只有拿元
+  schema 校验一遍才会暴露。
 
 想先看效果再读代码：打开 `web/index.html`（双击即可，无需构建），
 浏览器里跑的就是这份实现本身。
+
+---
+
+## 与现有 MoonBit 实现的差异
+
+MoonBit 生态中与本项目最接近的是
+[`Xu107-hhh/moonbit-jsonschema`](https://github.com/Xu107-hhh/moonbit-jsonschema)
+（官方套件 1307/1307，Apache-2.0）。本项目**明确承认与其存在功能重叠**
+（都是 2020-12 校验器），但聚焦以下对方未覆盖、或在其 README 中明确声明
+不做的能力，形成互补：
+
+| 能力 | `moonbit-jsonschema`（对方） | `moonbit-json-schema`（本项目） |
+| --- | --- | --- |
+| 正则引擎 | 依赖现成库 `moonbitlang/regexp` | **自研 ECMA-262 引擎**，约 1300 行，跨 wasm／js／native 语义一致，可独立复用 |
+| `$vocabulary` | **不支持**（其 README「已知限制」明确列出） | **完整支持**，`vocabulary.json` 5/5 |
+| `format` 断言 | 仅注解（2020-12 默认语义） | **15 个格式真实校验**，可选用例 929/1023 |
+| 元 schema lint | 内嵌 metaschema，未提供 lint 入口 | **`lint` 子命令**，校验 schema 自身合法性 |
+| 一致性调试 | 用 `gen_suite.py` 生成一次性测试 | **可交互测试台**：`JSTS_ONLY`／`JSTS_VERBOSE` 逐条定位 |
+
+互补价值的落点：对方解决「校验一份实例」，本项目补「写 schema 的人与调试
+实现的人真正需要的工具」——自研正则引擎（跨后端一致性 + 可独立复用的
+通用组件）、`$vocabulary`（自定义元 schema 场景）、`format` 断言（真实数据
+格式校验）、`lint`（schema 自检）。
+
+下面两个命令可直接复现「对方没有的能力」：
+
+```sh
+# 1. $vocabulary：这份自定义元 schema 关闭了 validation 词汇表，
+#    于是 user.schema.json 里的 minimum:18 失效，age:12 通过（对方不支持）
+moon run --target js cmd/main -- validate \
+  --metaschema examples/vocabulary/meta-no-validation.schema.json \
+  examples/vocabulary/user.schema.json \
+  examples/vocabulary/user.ok.json
+# => 通过
+
+# 2. format 断言：这份元 schema 声明了 format-assertion，
+#    于是 email/uri/ipv4 被真实校验，三个非法值逐条报错（对方只当注解）
+moon run --target js cmd/main -- validate \
+  --metaschema examples/format-assertion/meta-format-assertion.schema.json \
+  examples/format-assertion/contact.schema.json \
+  examples/format-assertion/contact.bad.json
+# => 不通过（3 处）：/email、/website、/ip 各一条 format 错误
+```
 
 ---
 
@@ -161,6 +206,24 @@ let compiled = @schema.Schema::of_with_documents(
 )
 ```
 
+### 4.1 正则引擎可独立使用
+
+`src/regex` 是一个**独立的包**，可以脱离校验器单独 `moon add` 使用——
+任何需要 ECMA-262 语义正则匹配的 MoonBit 项目（不限于 JSON Schema）都能用它，
+这正是「依赖现成正则库」的同类实现不具备的通用价值：
+
+```moonbit
+// 按 ECMA-262 语义：\d 只认 ASCII、按码点而非 UTF-16 码元匹配
+let re = @regex.Regex::compile("^\\d{3,4}$")
+if re.matches_whole("2026") { println("匹配") }
+
+// 判断一个模式是否合法（严格 ECMA-262，拒绝 \a 这类恒等转义）
+@regex.Regex::is_valid_strict("(?<name>x)")
+```
+
+它跨 `wasm` / `js` / `native` 三个目标给出完全一致的结果，因为匹配逻辑
+不依赖任何宿主正则。
+
 ### 5. 在浏览器里
 
 `web/index.html` 是一个纯静态页面，浏览器里跑的是**同一份实现**——它经
@@ -220,8 +283,27 @@ node scripts/build-web.mjs
 ### 注解关键字
 
 `title`、`description`、`default`、`examples`、`deprecated`、`readOnly`、
-`writeOnly`、`format`、`contentMediaType`、`contentEncoding`——一概不参与判定。
-`format` 在 2020-12 里默认就是注解，把它当断言会误判一批用例。
+`writeOnly`、`contentMediaType`、`contentEncoding`——一概不参与判定。
+
+`format` 是特例：它默认是注解（`format-annotation` 词汇表），但一旦元 schema
+声明了 `format-assertion` 词汇表，就升级为断言，实际校验字符串格式。本实现
+提供了 15 个格式的真实校验（见下）。
+
+### format 断言
+
+实现的 `format` 值校验（手写、按码点语义、不依赖宿主正则）：
+
+| 类别 | 格式 |
+| --- | --- |
+| 日期时间 | `date-time`、`date`、`time`、`duration` |
+| 网络 | `ipv4`、`ipv6`、`hostname`、`email`、`uri`、`uri-reference`、`uri-template` |
+| 标识 | `uuid`、`json-pointer`、`relative-json-pointer` |
+| 正则 | `regex`（严格 ECMA-262，拒绝 `\a` 等恒等转义） |
+
+`format` 的断言开关严格遵循 2020-12 语义：只有元 schema 声明
+`format-assertion` 词汇表时才生效，且 `$vocabulary` 里该词汇表写 `true` 还是
+`false` 都不影响（官方 `format-assertion.json` 用例即验证此点）。一致性测试台
+跑 `optional/format/*` 时通过 `force_format` 开关强制启用，普通用户路径不受影响。
 
 ---
 

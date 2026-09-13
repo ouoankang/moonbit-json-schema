@@ -119,6 +119,35 @@ fn load_json(path : String) -> Json? {
 }
 
 ///|
+/// 取 JSON 文档的 `$id`（若存在且为字符串），否则返回空串。
+fn json_id(node : Json) -> String {
+  match node {
+    Object(o) =>
+      match o.get("$id") {
+        Some(String(s)) => s
+        _ => ""
+      }
+    _ => ""
+  }
+}
+
+///|
+/// 读一个自定义元 schema 文件，取其 `$id` 作为挂载 URI。
+/// 返回 `(uri, node)`；`$id` 缺失或读取失败时返回 `None`。
+fn load_metaschema(path : String) -> (String, Json)? {
+  let node = match load_json(path) {
+    Some(n) => n
+    None => return None
+  }
+  let id = json_id(node)
+  if id == "" {
+    println("  元 schema 缺少 $id: " + path)
+    return None
+  }
+  Some((id, node))
+}
+
+///|
 fn usage() -> Unit {
   println("moonbit-json-schema —— JSON Schema draft 2020-12 校验器")
   println("")
@@ -134,7 +163,13 @@ fn usage() -> Unit {
   )
   println("")
   println("选项:")
-  println("  --quiet    只输出结论，不列出每条错误")
+  println("  --quiet            只输出结论，不列出每条错误")
+  println(
+    "  --metaschema <file> 挂一份自定义元 schema（按它的 $id），",
+  )
+  println(
+    "                      用于 $vocabulary / format-assertion 等场景",
+  )
   println("")
   println(
     "退出码: 0 通过 / 1 不通过 / 2 用法错误 / 3 读文件或解析失败",
@@ -143,6 +178,9 @@ fn usage() -> Unit {
   println("示例:")
   println(
     "  moon run --target js cmd/main -- validate examples/person.schema.json examples/person.ok.json",
+  )
+  println(
+    "  moon run --target js cmd/main -- --metaschema examples/vocabulary/meta-no-validation.schema.json validate examples/vocabulary/user.schema.json examples/vocabulary/user.ok.json",
   )
 }
 
@@ -164,7 +202,11 @@ fn print_error(e : @schema.ValidationError, quiet : Bool) -> Unit {
 
 ///|
 /// `validate <schema> <instance>...`
-fn cmd_validate(rest : Array[String], quiet : Bool) -> Unit {
+fn cmd_validate(
+  rest : Array[String],
+  quiet : Bool,
+  extra_docs : Array[(String, Json)],
+) -> Unit {
   if rest.length() < 2 {
     println("validate 需要至少一个 schema 和一个实例文件。")
     println("")
@@ -182,10 +224,11 @@ fn cmd_validate(rest : Array[String], quiet : Bool) -> Unit {
   }
   // 预置官方元 schema：这样 schema 里 `$ref` 到
   // `https://json-schema.org/draft/2020-12/schema` 也能解析。
-  let compiled = @schema.Schema::of_with_documents(
-    schema_node,
-    @metaschema.metaschema_documents(),
-  )
+  let docs = @metaschema.metaschema_documents()
+  for (uri, node) in extra_docs {
+    docs.push((uri, node))
+  }
+  let compiled = @schema.Schema::of_with_documents(schema_node, docs)
   println("schema : " + schema_path)
   let mut failed = 0
   for i = 1; i < rest.length(); i = i + 1 {
@@ -331,16 +374,36 @@ fn main {
   }
   let command = args[0]
   let rest : Array[String] = []
+  let extra_docs : Array[(String, Json)] = []
   let mut quiet = false
-  for i = 1; i < args.length(); i = i + 1 {
+  let mut i = 1
+  while i < args.length() {
     if args[i] == "--quiet" {
       quiet = true
+      i = i + 1
+    } else if args[i] == "--metaschema" {
+      // `--metaschema <file>`：挂一份自定义元 schema（按它的 $id），
+      // 用于演示 $vocabulary / format-assertion 等依赖自定义元 schema 的能力。
+      if i + 1 >= args.length() {
+        println("--metaschema 需要一个文件路径。")
+        set_exit_code(EXIT_USAGE)
+        return
+      }
+      match load_metaschema(args[i + 1]) {
+        Some((uri, node)) => extra_docs.push((uri, node))
+        None => {
+          set_exit_code(EXIT_IO)
+          return
+        }
+      }
+      i = i + 2
     } else {
       rest.push(args[i])
+      i = i + 1
     }
   }
   match command {
-    "validate" => cmd_validate(rest, quiet)
+    "validate" => cmd_validate(rest, quiet, extra_docs)
     "lint" => cmd_lint(rest, quiet)
     "metaschema" => cmd_metaschema()
     "help" | "--help" | "-h" => usage()
