@@ -1,7 +1,7 @@
 import {
   "moonbitlang/core/json",
-  "ouoankang/moonbit-json-schema/src/metaschema",
-  "ouoankang/moonbit-json-schema/src/schema",
+  "ouoankang/moonbit-regex/src/metaschema",
+  "ouoankang/moonbit-regex/src/schema",
 }
 
 pkgtype(kind: "executable")

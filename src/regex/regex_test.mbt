@@ -268,3 +268,86 @@ test "syntax validation" {
     }
   }
 }
+
+///|
+test "exec returns captures and index" {
+  // 整体匹配 + 多个捕获组 + 未参与组
+  let m = match Regex::compile("(a+)(b)?c").exec("xxaac") {
+    Some(x) => x
+    None => {
+      fail("should match")
+      return
+    }
+  }
+  assert_eq(m.matched, "aac")
+  assert_eq(m.index, 2)
+  assert_eq(m.captures.length(), 3)
+  assert_eq(m.captures[0], Some("aac"))
+  assert_eq(m.captures[1], Some("aa"))
+  assert_eq(m.captures[2], None) // (b)? 未参与
+}
+
+///|
+test "exec no match returns None" {
+  let r = Regex::compile("^\\d+$")
+  assert_true(r.exec("abc") is None)
+}
+
+///|
+test "exec named group and lookahead capture" {
+  // 对应 test262 S15.10.2.8_A1_T1: /(?=(a+))/.exec("baaabac") => ["", "aaa"], index 1
+  let m = match Regex::compile("(?=(a+))").exec("baaabac") {
+    Some(x) => x
+    None => {
+      fail("should match")
+      return
+    }
+  }
+  assert_eq(m.matched, "")
+  assert_eq(m.index, 1)
+  assert_eq(m.captures[1], Some("aaa"))
+}
+
+///|
+test "exec captures astral (code point) correctly" {
+  // emoji 按码点计，捕获组切出的内容也按码点
+  let m = match Regex::compile("(🐲)(x)").exec("a🐲xb") {
+    Some(x) => x
+    None => {
+      fail("should match")
+      return
+    }
+  }
+  assert_eq(m.index, 1)
+  assert_eq(m.captures[1], Some("🐲"))
+  assert_eq(m.captures[2], Some("x"))
+}
+
+///|
+test "backtracking empty-match backreference" {
+  // (a*) 匹配空串，\1+ 引用空串仍应成功（test262 S15.10.2.9_A1_T5）
+  let m = match Regex::compile("(a*)b\\1+").exec("baaaac") {
+    Some(x) => x
+    None => {
+      fail("无匹配")
+      return
+    }
+  }
+  assert_eq(m.matched, "b")
+  assert_eq(m.captures[1], Some(""))
+}
+
+///|
+test "alternation with negative lookahead" {
+  // (\.(?!com|org)|\/) 分支 + 否定前瞻（test262 S15.10.2.8_A2_T6）
+  let m = match Regex::compile("(\\.(?!com|org)|\\/)").exec("ah.info") {
+    Some(x) => x
+    None => {
+      fail("无匹配")
+      return
+    }
+  }
+  assert_eq(m.matched, ".")
+  assert_eq(m.index, 2)
+  assert_eq(m.captures[1], Some("."))
+}

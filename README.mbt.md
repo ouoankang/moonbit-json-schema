@@ -11,11 +11,12 @@
 
 | 指标 | 结果 |
 | --- | --- |
-| ECMA-262 语义用例 | **ecmascript-regex.json 86/86**、**non-bmp-regex.json 12/12** |
+| **test262 一致性**（S15.10.2.x，无 flags 子集） | **164 / 166（98.8%）** |
+| ECMA-262 语义用例 | ecmascript-regex.json 86/86、non-bmp-regex.json 12/12 |
 | 官方一致性套件 · 必测用例 | 1301 / 1301（100.0%，校验器测试床） |
 | 官方一致性套件 · 可选用例 | 929 / 1023（90.8%） |
-| 单元测试 | 61 / 61 通过（默认 `wasm` 目标） |
-| 自写源码 | 约 5 600 行 MoonBit（不含生成的 Unicode 表与元 schema） |
+| 单元测试 | 67 / 67 通过（默认 `wasm` 目标） |
+| 自写源码 | 约 5 900 行 MoonBit（不含生成的 Unicode 表与元 schema） |
 
 ---
 
@@ -64,11 +65,13 @@ MoonBit 官方已有通用正则库 `moonbitlang/regexp`（基于 Russ Cox 的 V
 ASCII 语义、按码点推进、恒等转义限制这些 ECMA-262 的关键差异点。
 
 **本项目（`src/regex`）填补这个空白**：一个严格实现 ECMA-262 语义、跨三后端
-结果完全一致的正则引擎。正确性用官方测试套件里**专门针对 ECMA-262 语义分歧**
-的用例证明：
+结果完全一致的正则引擎。正确性有**两层证据**：
 
-- `optional/ecmascript-regex.json` —— **86/86（100%）**
-- `optional/non-bmp-regex.json` —— **12/12（100%）**
+- **test262**（ECMA-262 官方一致性套件）的 `S15.10.2.x` 正则用例，适配
+  「无 flags 的 pattern 匹配语义」子集后，**164/166（98.8%）** 通过
+  （见 [一致性测试成绩](#一致性测试成绩)）；
+- JSON Schema 官方套件里**专门针对 ECMA-262 语义分歧**的用例：
+  `optional/ecmascript-regex.json` 86/86、`optional/non-bmp-regex.json` 12/12。
 
 仓库里还带了一个 JSON Schema draft 2020-12 校验器（必测 1301/1301），它是
 **引擎的验证测试床**——用真实场景证明引擎的正确性，而不是与生态里已有的
@@ -306,7 +309,24 @@ node scripts/build-web.mjs
 
 ## 一致性测试成绩
 
-成绩由仓库自带的一致性测试台跑出，测试数据随仓库版本化，**不依赖网络**：
+两层一致性证据，都由仓库自带测试台跑出，测试数据随仓库版本化，**不依赖网络**：
+
+### 1. test262（ECMA-262 官方一致性套件）
+
+引擎的核心正确性用 test262 的 `S15.10.2.x` 正则用例验证。提取的是「**无 flags
+的 pattern 匹配语义**」子集（带 `u`/`i`/`m`/`s`/`g`/`y` 标志的用例在生成阶段
+排除——引擎目前不实现 flags，这是明确的边界）。
+
+```sh
+moon run --target js cmd/test262
+# test262 (S15.10.2.x, 无 flags 子集): 164/166
+```
+
+用例由 `scripts/gen-test262.mjs` 从 test262 仓库提取成 `tests/test262/data.json`
+（原始文件缓存在 `tests/test262/raw/`，可追溯）。剩余 2 条失败是「嵌套可选组 +
+贪婪量词回溯」下捕获组的精确重置语义，记录在[已知限制](#已知限制)。
+
+### 2. JSON Schema 一致性套件（校验器测试床）
 
 ```sh
 moon run --target js cmd/conformance
@@ -535,24 +555,27 @@ if !v.vocab_unevaluated { effective = without_keywords(effective, unevaluated_ke
 
 诚实列出来，都是有意取舍，不是遗漏：
 
-1. **`format` 断言默认关闭，且不实现 IDN/IRI 格式。**
-   `format` 在 2020-12 默认是注解（`format-annotation` 词汇表），只有元
-   schema 声明 `format-assertion` 时才升级为断言。一致性测试台跑
-   `optional/format/*` 时会**强制启用** format 断言，已实现 15 个格式
-   （date-time / date / time / duration / ipv4 / ipv6 / hostname / email /
-   uri / uri-reference / uri-template / uuid / json-pointer /
-   relative-json-pointer / regex）。
-   未实现的格式集中在需要完整 punycode 与 IDNA 表的 IDN/IRI 上：
-   `idn-email` / `idn-hostname` / `iri` / `iri-reference`，以及
-   `hostname` 里 `xn--` 前缀标签的 punycode 解码校验。这些留作后续。
-2. **只支持 draft 2020-12。** 2019-09 及更早草案不识别。
-   这会让 `optional/cross-draft.json` 的 1 条用例失败（它要求把
-   `draft2019-09/` 下的引用按 2019-09 语义处理）。
-3. **CLI 需要 `js` 后端**，因为它读文件而 `wasm` 没有文件系统。
-   库本体不受影响。
-4. **`contentSchema` 不做校验**（`contentMediaType` / `contentEncoding`
-   按注解处理）。规范本身也不要求校验。
-5. 求值有递归深度上限（256 层），超出后放弃深入——宁可放过也不误报。
+**正则引擎的边界（核心）**：
+
+1. **不支持 flags**（`i`/`m`/`s`/`u`/`v`/`g`/`y`）。引擎实现的是「无 flags 的
+   pattern 匹配语义」——即 `compile(pattern)` 后 `find`/`exec` 的行为。带 flags
+   的 test262 用例在提取阶段就排除了，这是明确的 scope 边界，不虚报。
+2. **不支持 `v` 模式的 Unicode 集合记法**（`unicodeSets`）与 `d` 标志
+   （match indices）。这些是较新的 ECMA-262 提案，属后续扩展。
+3. **捕获组在「嵌套可选组 + 贪婪量词回溯」下的重置语义有 2 条 test262 用例
+   未通过**（`S15.10.2.5_A1_T4`、`S15.10.2.8_A2_T1`）。这是量词迭代内捕获组
+   正确重置的精细语义，属已知缺陷，见 test262 成绩 164/166。
+
+**JSON Schema 校验器（测试床）的边界**：
+
+4. **`format` 断言默认关闭，且不实现 IDN/IRI 格式。** `format` 在 2020-12
+   默认是注解，只有元 schema 声明 `format-assertion` 才升级为断言。已实现
+   15 个格式，未实现 `idn-email`/`idn-hostname`/`iri`/`iri-reference` 等
+   需 IDNA 表的格式。
+5. **只支持 draft 2020-12。** 2019-09 及更早草案不识别（cross-draft 1 条失败）。
+6. **CLI 需要 `js` 后端**（读文件），库本体不受影响。
+7. **`contentSchema` 不做校验**。规范本身也不要求。
+8. 求值有递归深度上限（256 层），超出后放弃深入——宁可放过也不误报。
 
 ---
 

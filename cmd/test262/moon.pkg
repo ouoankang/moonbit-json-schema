@@ -1,6 +1,6 @@
 import {
-  "moonbitlang/core/debug",
   "moonbitlang/core/json",
-  "ouoankang/moonbit-regex/src/pointer",
   "ouoankang/moonbit-regex/src/regex",
 }
+
+pkgtype(kind: "executable")

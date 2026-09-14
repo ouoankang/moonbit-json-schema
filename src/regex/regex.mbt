@@ -939,6 +939,12 @@ fn Parser::parse_class_atom(self : Parser) -> Result[ClassItem, String] {
     self.pos = self.pos + 1
     return Ok(CBuiltin(esc))
   }
+  if esc == 0x62 {
+    // `\b` 在字符类内是退格 U+0008（ECMA-262 `ClassEscape :: b`），
+    // 类外才是词边界。这里单独处理，否则会落到恒等转义变成字面量 `b`。
+    self.pos = self.pos + 1
+    return Ok(CSingle(0x08))
+  }
   if esc == 0x70 || esc == 0x50 {
     let negated = esc == 0x50
     self.pos = self.pos + 1
@@ -1042,6 +1048,71 @@ pub fn Regex::find(self : Regex, input : String) -> Bool {
     }
   }
   false
+}
+
+///|
+/// 一次匹配的结果，等价于 ECMAScript `RegExp.prototype.exec` 的核心
+/// （不含 `lastIndex` / `g` 标志语义）。
+pub struct Match {
+  /// 匹配到的整体内容（下标 0）。
+  matched : String
+  /// 各捕获组内容（下标 1..n），未参与匹配的组为 `None`。
+  captures : Array[String?]
+  /// 匹配起始位置（按码点计），对应 ECMAScript 的 `index`。
+  index : Int
+}
+
+///|
+/// 未锚定搜索并返回捕获组，等价于 `RegExp.prototype.exec` 的首次匹配。
+/// 无匹配时返回 `None`。
+///
+/// `captures[0]` 即整体匹配；`captures[i]`（i ≥ 1）为第 i 个捕获组，
+/// 未参与匹配的组是 `None`（ECMAScript 里是 `undefined`）。
+pub fn Regex::exec(self : Regex, input : String) -> Match? {
+  let codes = to_code_points(input)
+  let m : Matcher = {
+    input: codes,
+    len: codes.length(),
+    names: self.names,
+    cap_start: [],
+    cap_end: [],
+  }
+  m.prepare_captures(self.group_count)
+  let mut matched_end = -1
+  for i = 0; i <= codes.length(); i = i + 1 {
+    m.clear_captures()
+    if m.seq(self.prog, 0, i, fn(p : Int) -> Bool {
+        matched_end = p
+        true
+      }) {
+      let matched = codes_to_string(codes, i, matched_end)
+      let captures : Array[String?] = []
+      captures.push(Some(matched))
+      for g = 1; g <= self.group_count; g = g + 1 {
+        let start = m.cap_start[g]
+        let end = m.cap_end[g]
+        if start < 0 {
+          captures.push(None)
+        } else {
+          captures.push(Some(codes_to_string(codes, start, end)))
+        }
+      }
+      return Some({ matched, captures, index: i, })
+    }
+  }
+  None
+}
+
+///|
+/// 把码点区间 `[from, to)` 还原成字符串。
+fn codes_to_string(codes : Array[Int], from : Int, to : Int) -> String {
+  let sb = StringBuilder()
+  let mut i = from
+  while i < to {
+    sb.write_char(Int::unsafe_to_char(codes[i]))
+    i = i + 1
+  }
+  sb.to_string()
 }
 
 ///|
@@ -1264,15 +1335,24 @@ fn Matcher::repeat_match(
 ) -> Bool {
   let can_more = max < 0 || count < max
   if greedy {
-    if can_more &&
-      self.node_match(inner, pos, fn(p : Int) -> Bool {
+    if can_more {
+      let advanced = self.node_match(inner, pos, fn(p : Int) -> Bool {
         if p == pos {
-          false
+          // 空匹配：这一次迭代不推进位置，继续迭代只会原地打转。
+          // 按 ECMA-262 的 RepeatMatcher，空迭代也计入 count——
+          // 若 count+1 已满足 min，就停在当前位置尝试延续，否则失败。
+          if count + 1 >= min {
+            k(pos)
+          } else {
+            false
+          }
         } else {
           self.repeat_match(inner, min, max, greedy, count + 1, p, k)
         }
-      }) {
-      return true
+      })
+      if advanced {
+        return true
+      }
     }
     if count >= min {
       return k(pos)
@@ -1285,7 +1365,12 @@ fn Matcher::repeat_match(
     if can_more {
       return self.node_match(inner, pos, fn(p : Int) -> Bool {
         if p == pos {
-          false
+          // 惰性 + 空匹配：同上，空迭代计入 count。
+          if count + 1 >= min {
+            k(pos)
+          } else {
+            false
+          }
         } else {
           self.repeat_match(inner, min, max, greedy, count + 1, p, k)
         }

@@ -12,3 +12,7 @@ pkg.generated.mbti
 # 页面渲染验证用的可选依赖（scripts/web-render-check.mjs）。
 # 没装也能跑其余检查，脚本会自己跳过。
 node_modules/
+
+# test262 原始用例缓存（291 个文件，由 scripts/gen-test262.mjs 下载）。
+# 提取结果 data.json 已入库，raw 可通过脚本重新下载，不入库。
+tests/test262/raw/

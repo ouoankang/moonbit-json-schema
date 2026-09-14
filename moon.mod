@@ -9,7 +9,7 @@
 //   "moonbitlang/x@0.4.6",
 // }
 
-name = "ouoankang/moonbit-json-schema"
+name = "ouoankang/moonbit-regex"
 
 version = "0.1.0"
 
@@ -19,15 +19,8 @@ repository = "https://github.com/ouoankang/moonbit-json-schema"
 
 license = "Apache-2.0"
 
-keywords = [
-  "json",
-  "jsonschema",
-  "validation",
-  "schema",
-  "draft2020-12",
-  "regex",
-]
+keywords = [ "regex", "regexp", "ecma-262", "ecmascript", "unicode", "pattern" ]
 
 preferred_target = "wasm"
 
-description = "Strict ECMA-262 regular expression engine for MoonBit (cross-backend consistent), with a JSON Schema 2020-12 validator as its conformance testbed (1301/1301)."
+description = "A strict ECMA-262 regular expression engine for MoonBit, cross-backend consistent (wasm/js/native), validated against test262 conformance tests."
