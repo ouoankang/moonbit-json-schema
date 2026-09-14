@@ -51,7 +51,7 @@ try {
 // 它靠调用 main() 把 API 挂到 globalThis 上。
 (0, eval)(code);
 
-const api = globalThis.MoonbitJsonSchema;
+const api = globalThis.MoonbitRegex;
 
 console.log("web 入口冒烟测试");
 console.log(`  产物: ${bundle}`);
@@ -63,7 +63,7 @@ console.log("");
 // ---------------------------------------------------------------------------
 
 console.log("== 接口 ==");
-check("globalThis.MoonbitJsonSchema 存在", api !== undefined && api !== null);
+check("globalThis.MoonbitRegex 存在", api !== undefined && api !== null);
 if (api === undefined || api === null) {
   console.log("");
   console.log("API 未挂载，后续用例无法执行。");

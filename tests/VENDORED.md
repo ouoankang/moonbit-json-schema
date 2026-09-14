@@ -12,7 +12,7 @@
 
 ```sh
 git clone <this-repo>
-cd moonbit-json-schema
+cd moonbit-regex
 moon run --target js cmd/conformance
 ```
 

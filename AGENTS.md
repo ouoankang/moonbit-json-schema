@@ -154,7 +154,7 @@ cmd/web/main.mbt        MoonBit 侧入口：把三个函数挂到 globalThis
         ↓ moon build --target js --release
 _build/js/release/build/cmd/web/web.js
         ↓ node scripts/build-web.mjs（拷贝）
-web/vendor/moonbit-json-schema.js   ← 提交进仓库，clone 下来即可打开
+web/vendor/moonbit-regex.js   ← 提交进仓库，clone 下来即可打开
 ```
 
 接口形状（`web-smoke.mjs` 会钉住）：三个函数都收字符串、返回 JSON 字符串。

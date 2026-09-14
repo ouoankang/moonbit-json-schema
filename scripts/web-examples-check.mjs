@@ -23,11 +23,11 @@ const examplesPath = resolve(root, "web/examples.js");
 // 加载示例数据（同样是自执行脚本，挂到 globalThis 上）。
 (0, eval)(readFileSync(examplesPath, "utf8"));
 
-const api = globalThis.MoonbitJsonSchema;
+const api = globalThis.MoonbitRegex;
 const examples = globalThis.JSON_SCHEMA_DEMO_EXAMPLES;
 
 if (!api) {
-  console.error("没有挂载 MoonbitJsonSchema，先执行 moon build --target js --release");
+  console.error("没有挂载 MoonbitRegex，先执行 moon build --target js --release");
   process.exit(2);
 }
 if (!Array.isArray(examples) || examples.length === 0) {

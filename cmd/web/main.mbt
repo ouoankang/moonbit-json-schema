@@ -17,7 +17,7 @@ extern "js" fn register_api(
   metaschema_list : () -> String,
 ) -> Unit =
   #| (validate, lint, metaschemaList) => {
-  #|   globalThis.MoonbitJsonSchema = { validate, lint, metaschemaList };
+  #|   globalThis.MoonbitRegex = { validate, lint, metaschemaList };
   #| }
 
 // 非 js 后端给空实现，这样 `moon check` 在任何目标上都不会因为缺 FFI 而失败。

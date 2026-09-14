@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const built = resolve(root, "_build/js/release/build/cmd/web/web.js");
 const outDir = resolve(root, "web/vendor");
-const target = resolve(outDir, "moonbit-json-schema.js");
+const target = resolve(outDir, "moonbit-regex.js");
 
 console.log("编译 cmd/web（目标 js, release）...");
 execFileSync("moon", ["build", "--target", "js", "--release"], {
@@ -26,7 +26,7 @@ mkdirSync(outDir, { recursive: true });
 copyFileSync(built, target);
 
 const kb = (statSync(target).size / 1024).toFixed(0);
-console.log(`已复制 ${kb} KB → web/vendor/moonbit-json-schema.js`);
+console.log(`已复制 ${kb} KB → web/vendor/moonbit-regex.js`);
 console.log("");
 console.log("接下来可以：");
 console.log("  node scripts/web-smoke.mjs      # 确认接口挂载正确");

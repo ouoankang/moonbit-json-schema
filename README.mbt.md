@@ -1,8 +1,8 @@
 <!-- 本文件由 scripts/sync-readme.mjs 从 README.md 复制生成，请勿直接编辑。 -->
 
-# moonbit-regex（原 moonbit-json-schema）
+# moonbit-regex
 
-**严格 ECMA-262 语义的正则引擎，用 MoonBit 从零实现，跨 wasm／js／native 三后端结果一致。**
+**MoonBit 从零实现的 ECMA-262 正则引擎（无 flags pattern 匹配语义），跨 wasm／js／native 三后端结果一致。**
 
 附带一个 JSON Schema draft 2020-12 校验器，作为引擎的**验证测试床**。
 

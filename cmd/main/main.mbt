@@ -1,4 +1,4 @@
-// moonbit-json-schema 的命令行入口。
+// moonbit-regex 的命令行入口。
 //
 // 为什么 CLI 只在 js 后端跑：它要读文件，而 wasm 目标没有文件系统。
 // 库本体（src/）不依赖任何平台能力，在 wasm 上通过全部单元测试；
@@ -149,7 +149,7 @@ fn load_metaschema(path : String) -> (String, Json)? {
 
 ///|
 fn usage() -> Unit {
-  println("moonbit-json-schema —— JSON Schema draft 2020-12 校验器")
+  println("moonbit-regex —— ECMA-262 正则引擎 + JSON Schema 校验器")
   println("")
   println("用法:")
   println(

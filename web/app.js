@@ -1,6 +1,6 @@
 // 在线试用页的胶水层。
 //
-// 这里没有任何校验逻辑 —— 全部结论来自 vendor/moonbit-json-schema.js，
+// 这里没有任何校验逻辑 —— 全部结论来自 vendor/moonbit-regex.js，
 // 也就是 MoonBit 那份实现本身。本文件只负责：把文本框内容送进去、
 // 把回来的 JSON 渲染成表格、并把「解析失败」和「校验不通过」显示成
 // 两种明显不同的东西。
@@ -11,7 +11,7 @@
 (function () {
   "use strict";
 
-  var REPO = "https://github.com/ouoankang/moonbit-json-schema";
+  var REPO = "https://github.com/ouoankang/moonbit-regex";
 
   // ---------------------------------------------------------------------
   // 示例
@@ -50,7 +50,7 @@
   el.repoLink.href = REPO;
   el.footRepo.href = REPO;
 
-  var api = window.MoonbitJsonSchema;
+  var api = window.MoonbitRegex;
 
   // ---------------------------------------------------------------------
   // 渲染
@@ -146,7 +146,7 @@
   function run(action) {
     if (!api) {
       setVerdict("error", "加载失败");
-      setNote("没有找到 MoonBitJsonSchema。请确认 vendor/moonbit-json-schema.js 已随页面一起加载。");
+      setNote("没有找到 MoonbitRegex。请确认 vendor/moonbit-regex.js 已随页面一起加载。");
       return;
     }
 
@@ -269,7 +269,7 @@
 
   if (!api) {
     setVerdict("error", "加载失败");
-    setNote("没有找到 MoonbitJsonSchema。");
+    setNote("没有找到 MoonbitRegex。");
   } else {
     // 列一下内置元 schema，让人看到「离线可用」是有实据的。
     try {

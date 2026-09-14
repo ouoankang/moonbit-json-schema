@@ -18,9 +18,9 @@ import { createRequire } from "node:module";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-const vendor = resolve(root, "web/vendor/moonbit-json-schema.js");
+const vendor = resolve(root, "web/vendor/moonbit-regex.js");
 if (!existsSync(vendor)) {
-  console.error("缺少 web/vendor/moonbit-json-schema.js");
+  console.error("缺少 web/vendor/moonbit-regex.js");
   console.error("请先执行：node scripts/build-web.mjs");
   process.exit(2);
 }
@@ -83,7 +83,7 @@ console.log("== 启动状态 ==");
 check("没有脚本报错", errors.length === 0, errors.slice(0, 3).join(" | "));
 check(
   "MoonBit API 已挂载到 window",
-  typeof dom.window.MoonbitJsonSchema === "object" && dom.window.MoonbitJsonSchema !== null,
+  typeof dom.window.MoonbitRegex === "object" && dom.window.MoonbitRegex !== null,
 );
 check("示例下拉有 7 项", $("example-select").options.length === 7, $("example-select").options.length);
 check(
